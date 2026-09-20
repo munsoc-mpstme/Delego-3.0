@@ -48,8 +48,8 @@ class DetailPage extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            scheme.primary.withOpacity(0.0),
-            scheme.primary.withOpacity(0.95),
+            scheme.primary.withValues(alpha: 0.0),
+            scheme.primary.withValues(alpha: 0.95),
           ],
           stops: [0.0, 0.9],
           begin: FractionalOffset.topCenter,
@@ -85,7 +85,7 @@ class DetailPage extends StatelessWidget {
                 Text(
                   schedule.description ?? '',
                   style: textTheme.bodyLarge?.copyWith(
-                    color: scheme.onPrimary.withOpacity(0.85),
+                    color: scheme.onPrimary.withValues(alpha: 0.85),
                   ),
                 ),
               ],

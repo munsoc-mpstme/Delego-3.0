@@ -158,7 +158,7 @@ class _RoomPageState extends State<RoomPage> {
               Text(
                 room.floor,
                 style: textTheme.titleMedium?.copyWith(
-                  color: scheme.onPrimary.withOpacity(0.85),
+                  color: scheme.onPrimary.withValues(alpha: 0.85),
                   fontSize: 18.65, fontWeight: FontWeight.w600, fontFamily: 'Poppins',
                 ),
               ),

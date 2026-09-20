@@ -172,7 +172,7 @@ class _SchedulePageState extends State<SchedulePage> {
           bottom: TabBar(
             indicatorColor: scheme.onPrimary,
             labelColor: scheme.onPrimary,
-            unselectedLabelColor: scheme.onPrimary.withOpacity(0.7),
+            unselectedLabelColor: scheme.onPrimary.withValues(alpha: 0.7),
             tabs: _days.map((day) => Tab(text: day.dayKey)).toList(),
           ),
         ),

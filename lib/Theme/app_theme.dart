@@ -14,13 +14,7 @@ ThemeData getLightTheme() {
     // Define the color that will be used for text/icons *on* the primary color.
     // Since kBrandSeed is dark, white is the best contrasting color for text.
     onPrimary: Colors.white,
-
-    // Use a very light surface and background for a standard light theme
-    background: Colors.white,
     surface: const Color(0xFFFAFAFA),
-
-    // Define the color that will be used for text/icons *on* the background/surface
-    onBackground: Colors.black87,
     onSurface: Colors.black87,
 
     // Default secondary, which M3 would normally generate a good complement for.
@@ -44,17 +38,11 @@ ThemeData getDarkTheme() {
     // Force the primary color to your exact brand color
     primary: kBrandSeed,
 
-    // Set other key colors manually
-    // Use true black for the background to match your "purple and black" theme
-    background: Colors.black,
-
     // Use a very dark grey for surfaces (like Cards, Dialogs)
     surface: const Color(0xFF1A1A1A),
 
     // Define the color that will be used for text/icons *on* the primary color
     onPrimary: Colors.white,
-    // Define the color that will be used for text/icons *on* the background/surface
-    onBackground: Colors.white70,
     onSurface: Colors.white70,
 
     // --- NEW COLORS ADDED TO FIX TEAL BACKGROUNDS ---
@@ -82,7 +70,7 @@ ThemeData getDarkTheme() {
     ],
     // Optional: You can explicitly set the Scaffold background to be the
     // scheme's background color (which is now pure black)
-    scaffoldBackgroundColor: myCustomDarkColorScheme.background,
+    scaffoldBackgroundColor: myCustomDarkColorScheme.surface,
 
     // --- TEXT FIELD SPECIFIC TWEAKS ---
     // If the above color scheme change is not enough, you can specifically style the input decoration theme.

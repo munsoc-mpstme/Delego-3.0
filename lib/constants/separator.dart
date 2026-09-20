@@ -23,7 +23,7 @@ class Separator extends StatelessWidget {
       height: height,
       width: width,
       decoration: BoxDecoration(
-        color: color ?? scheme.primary.withOpacity(0.6),
+        color: color ?? scheme.primary.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(height / 2),
       ),
     );

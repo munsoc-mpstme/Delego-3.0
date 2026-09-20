@@ -110,7 +110,7 @@ class _HomePageState extends State<HomePage> {
                       Text(
                         '2026',
                         style: textTheme.titleLarge?.copyWith(
-                          color: scheme.onSurface.withOpacity(0.8),
+                          color: scheme.onSurface.withValues(alpha: 0.8),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -161,6 +161,13 @@ class _HomePageState extends State<HomePage> {
                 titleRight: '',
                 imageAsset: 'assets/icons/calendar.png',
                 onTap: () => goToPage(SchedulePage()),
+              ),
+              _HomeCard(
+                indexText: '05.',
+                titleLeft: 'Scan',
+                titleRight: 'QR',
+                imageAsset: 'assets/icons/qr.png',
+                onTap: () => goToPage(QrScanner()),
               ),
 
               const SizedBox(height: 30),
@@ -228,7 +235,7 @@ class _HomeCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: scheme.shadow.withOpacity(0.2),
+              color: scheme.shadow.withValues(alpha: 0.2),
               blurRadius: 8,
               offset: const Offset(2, 4),
             ),
@@ -244,7 +251,7 @@ class _HomeCard extends StatelessWidget {
                 Text(
                   indexText,
                   style: textTheme.titleMedium?.copyWith(
-                    color: scheme.onPrimary.withOpacity(0.9),
+                    color: scheme.onPrimary.withValues(alpha: 0.9),
                     fontWeight: FontWeight.w600,
                   ),
                 ),

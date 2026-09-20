@@ -141,7 +141,7 @@ class _ProfilePageState extends State<ProfilePage> {
           style: textTheme.bodyMedium?.copyWith(color: scheme.onSurface),
           decoration: InputDecoration(
             hintText: field == 'Date of Birth' ? "dd-mm-yyyy" : "Enter new $field",
-            hintStyle: textTheme.bodyMedium?.copyWith(color: scheme.onSurface.withOpacity(0.5)),
+            hintStyle: textTheme.bodyMedium?.copyWith(color: scheme.onSurface.withValues(alpha: 0.5)),
           ),
           onChanged: (value) => newValue = value,
         ),

@@ -53,7 +53,7 @@ class _StudyGuidesPageState extends State<StudyGuidespage> {
                 "Click to view the PDF",
                 style: textTheme.bodyMedium?.copyWith(
                   fontSize: 16.0,
-                  color: scheme.onSurface.withOpacity(0.7),
+                  color: scheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
               const SizedBox(height: 20.0),
@@ -143,7 +143,7 @@ class _StudyGuidesPageState extends State<StudyGuidespage> {
           borderRadius: BorderRadius.circular(12.0),
           boxShadow: [
             BoxShadow(
-              color: scheme.shadow.withOpacity(0.12),
+              color: scheme.shadow.withValues(alpha: 0.12),
               blurRadius: 8.0,
               offset: const Offset(0, 2),
             ),

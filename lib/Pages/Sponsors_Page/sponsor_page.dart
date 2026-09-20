@@ -42,7 +42,7 @@ class SponsorPage extends StatelessWidget {
             itemBuilder: (context, index) {
               return Card(
                 elevation: 4,
-                shadowColor: scheme.shadow.withOpacity(0.2),
+                shadowColor: scheme.shadow.withValues(alpha: 0.2),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),

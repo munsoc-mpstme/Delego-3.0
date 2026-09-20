@@ -137,7 +137,7 @@ class _RegisterPageState extends State<RegisterPage> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      backgroundColor: scheme.background,
+      backgroundColor: scheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
@@ -199,7 +199,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     Text(
                       'Already a member?',
                       style: textTheme.bodyMedium?.copyWith(
-                        color: scheme.onBackground,
+                        color: scheme.onSurface,
                       ),
                     ),
                     TextButton(

@@ -152,7 +152,7 @@ class _LaunchScreenState extends State<LaunchScreen>
             FadeTransition(
               opacity: _textController1,
               child: Text(
-                'MumbaiMUN 2026',
+                'MumbaiMUN 2025',
                 style: textTheme.titleLarge?.copyWith(
                   color: scheme.onSurface,
                   fontWeight: FontWeight.bold,

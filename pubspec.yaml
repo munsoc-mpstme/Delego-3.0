@@ -37,12 +37,19 @@ dependencies:
   cupertino_icons: ^1.0.2
   shared_preferences: ^2.3.2
   http: ^1.2.2
-  syncfusion_flutter_pdfviewer: any
+  syncfusion_flutter_pdfviewer: ^34.2.8
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  device_preview: ^1.2.0
+  device_preview: ^3.0.0
   flutter_launcher_icons: "^0.14.1"
+
+  # The "flutter_lints" package below contains a set of recommended lints to
+  # encourage good coding practices. The lint set provided by the package is
+  # activated in the `analysis_options.yaml` file located at the root of your
+  # package. See that file for information about deactivating specific lint
+  # rules and activating additional ones.
+  flutter_lints: ^6.0.0
 
 flutter_launcher_icons:
   android: true
@@ -51,13 +58,6 @@ flutter_launcher_icons:
   min_sdk_android: 26
   adaptive_icon_background: "#ffffff"
   adaptive_icon_foreground: "assets/icons/mm-logo-white-bg.png"
-
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
-  flutter_lints: ^4.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

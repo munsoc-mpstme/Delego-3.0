@@ -84,7 +84,7 @@ class _QrCodeState extends State<QrCode> {
                   "Bon appétit! Enjoy your meal 🍽️",
                   style: textTheme.bodyLarge?.copyWith(
                     fontWeight: FontWeight.w500,
-                    color: scheme.onSurface.withOpacity(0.65),
+                    color: scheme.onSurface.withValues(alpha: 0.65),
                   ),
                 ),
               ],
@@ -95,21 +95,21 @@ class _QrCodeState extends State<QrCode> {
                 Icon(
                   Icons.qr_code_rounded,
                   size: 100,
-                  color: scheme.onSurface.withOpacity(0.4),
+                  color: scheme.onSurface.withValues(alpha: 0.4),
                 ),
                 const SizedBox(height: 20),
                 Text(
                   "No QR Code available.",
                   style: textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w500,
-                    color: scheme.onSurface.withOpacity(0.7),
+                    color: scheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
                 const SizedBox(height: 10),
                 Text(
                   "Error! No QR code available, contact the Organizing Committee",
                   style: textTheme.bodyMedium?.copyWith(
-                    color: scheme.onSurface.withOpacity(0.5),
+                    color: scheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
               ],

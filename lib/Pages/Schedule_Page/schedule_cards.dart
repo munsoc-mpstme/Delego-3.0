@@ -33,7 +33,7 @@ class ScheduleSummary extends StatelessWidget {
           errorBuilder: (context, error, stackTrace) => Container(
             height: 92.0,
             width: 92.0,
-            color: scheme.surfaceVariant,
+            color: scheme.surfaceContainerHighest,
             child: Icon(Icons.image_not_supported,
                 color: scheme.onSurfaceVariant),
           ),
@@ -70,7 +70,7 @@ class ScheduleSummary extends StatelessWidget {
         children: [
           Text(
             schedule.name ?? '',
-            style: Style.titleTextStyle?.copyWith(
+            style: Style.titleTextStyle.copyWith(
               color: scheme.onPrimary,
               fontWeight: FontWeight.w600,
               fontSize: 18,
@@ -81,15 +81,15 @@ class ScheduleSummary extends StatelessWidget {
           const SizedBox(height: 4.0),
           Text(
             schedule.location ?? '',
-            style: Style.commonTextStyle?.copyWith(
-              color: scheme.onPrimary.withOpacity(0.8),
+            style: Style.commonTextStyle.copyWith(
+              color: scheme.onPrimary.withValues(alpha: 0.8),
               fontSize: 14,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 6.0),
-          Separator(color: scheme.onPrimary.withOpacity(0.2)),
+          Separator(color: scheme.onPrimary.withValues(alpha: 0.2)),
           const SizedBox(height: 6.0),
           _scheduleValue(
             value: schedule.time ?? '',
@@ -106,7 +106,7 @@ class ScheduleSummary extends StatelessWidget {
         borderRadius: BorderRadius.circular(12.0),
         boxShadow: [
           BoxShadow(
-            color: scheme.shadow.withOpacity(0.2),
+            color: scheme.shadow.withValues(alpha: 0.2),
             blurRadius: 8.0,
             offset: const Offset(0, 4),
           ),
@@ -153,7 +153,7 @@ class ScheduleSummary extends StatelessWidget {
           borderRadius: BorderRadius.circular(12.0),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            splashColor: scheme.onPrimary.withOpacity(0.1),
+            splashColor: scheme.onPrimary.withValues(alpha: 0.1),
             onTap: horizontal
                 ? () {
               Navigator.of(context).push(
