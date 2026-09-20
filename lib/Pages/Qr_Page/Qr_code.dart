@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:delego/Theme/theme_controller.dart';
+// import 'package:delego/Theme/theme_controller.dart';
 
 
 class QrCode extends StatefulWidget {
