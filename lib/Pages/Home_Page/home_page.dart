@@ -10,7 +10,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:delego/Theme/theme_controller.dart';
 import 'package:delego/Pages/Qr_Page/Qr_scanner.dart';
 
-
 class HomePage extends StatefulWidget {
   final ThemeController controller;
   const HomePage({super.key, required this.controller});
@@ -52,6 +51,17 @@ class _HomePageState extends State<HomePage> {
     final scheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final size = MediaQuery.of(context).size;
+    Future<Widget> renderScanner() async {
+      final prefs = await SharedPreferences.getInstance();
+
+      final role = prefs.getString('role') ?? '';
+
+      if (role == 'oc') {
+        return QrScanner();
+      } else {
+        return QrCode();
+      }
+    }
 
     return PopScope(
       canPop: false,
@@ -142,12 +152,15 @@ class _HomePageState extends State<HomePage> {
                 onTap: () => goToPage(StudyGuidespage()),
               ),
               _HomeCard(
-                indexText: '02.',
-                titleLeft: 'My',
-                titleRight: 'QR',
-                imageAsset: 'assets/icons/qr.png',
-                onTap: () => goToPage(QrCode()),
-              ),
+                  indexText: '02.',
+                  titleLeft: 'My',
+                  titleRight: 'QR',
+                  imageAsset: 'assets/icons/qr.png',
+                  onTap: () async {
+                    final page = await renderScanner();
+                    goToPage(page);
+                  },
+                ),
               _HomeCard(
                 indexText: '03.',
                 titleLeft: 'Rooms',
@@ -161,13 +174,6 @@ class _HomePageState extends State<HomePage> {
                 titleRight: '',
                 imageAsset: 'assets/icons/calendar.png',
                 onTap: () => goToPage(SchedulePage()),
-              ),
-              _HomeCard(
-                indexText: '05.',
-                titleLeft: 'Scan',
-                titleRight: 'QR',
-                imageAsset: 'assets/icons/qr.png',
-                onTap: () => goToPage(QrScanner()),
               ),
 
               const SizedBox(height: 30),

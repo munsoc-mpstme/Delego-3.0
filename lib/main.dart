@@ -63,7 +63,7 @@ class _MyAppState extends State<MyApp> {
           themeMode: widget.controller.mode,
           home: showLaunchScreen
               ? LaunchScreen(onLaunchComplete: _onLaunchComplete)
-              : (isLoggedIn == true //logging screen->true  
+              : (isLoggedIn == true //login screen->true
               ? HomePage(controller: widget.controller)
               : LoginPage(controller: widget.controller)),
         );
