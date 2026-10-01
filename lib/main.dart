@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'Pages/Login_Page/login_page.dart';
 import 'Pages/Home_Page/home_page.dart';
 
 // Centralized theming imports
 import 'Theme/app_theme.dart';
 import 'Theme/theme_controller.dart';
+
+// MUNDRA access layer
+import 'api/api_client.dart';
+import 'auth/capabilities.dart';
+import 'package:delego/constants/backend.dart';
+
+final navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,34 +23,95 @@ Future<void> main() async {
   final controller = ThemeController();
   await controller.loadThemeMode();
 
-  runApp(MyApp(controller: controller));
+  final api = ApiClient(baseUrl:Backend.baseUrl );
+  final caps = Capabilities(api);
+
+  runApp(MyApp(controller: controller, api: api, caps: caps));
 }
 
 class MyApp extends StatefulWidget {
   final ThemeController controller;
-  const MyApp({super.key, required this.controller});
+  final ApiClient api;
+  final Capabilities caps;
+
+  const MyApp({
+    super.key,
+    required this.controller,
+    required this.api,
+    required this.caps,
+  });
 
   @override
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   bool showLaunchScreen = true;
   bool? isLoggedIn;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
+    // 403: access was revoked/changed -> refetch what this user can do.
+    widget.api.onForbidden = widget.caps.refresh;
+    // 401: token expired (12h) or invalid -> back to login.
+    widget.api.onUnauthorized = _handleUnauthorized;
+
     _initializeApp();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // Re-read permissions whenever the app comes back to the foreground.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && isLoggedIn == true) {
+      widget.caps.refresh().catchError((_) {});
+    }
+  }
+
+  void _handleUnauthorized() {
+    widget.caps.clear();
+    if (!mounted) return;
+    setState(() => isLoggedIn = false);
+
+    // During the splash the normal home switch will show LoginPage.
+    if (!showLaunchScreen) {
+      navigatorKey.currentState?.pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => LoginPage(controller: widget.controller),
+        ),
+        (_) => false,
+      );
+    }
   }
 
   Future<void> _initializeApp() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String? token = prefs.getString('token');
+    final bool hasToken = token != null && token.isNotEmpty;
 
+    if (hasToken) {
+      try {
+        // Load permissions before the first screen. A 401 here clears the
+        // token and flips isLoggedIn via _handleUnauthorized.
+        await widget.caps.refresh();
+      } catch (_) {
+        // Offline at startup: keep the session, retry on resume.
+      }
+    }
+
+    // Re-read: refresh() may have cleared an expired token.
+    final String? after = await widget.api.token;
     if (!mounted) return;
     setState(() {
-      isLoggedIn = token != null && token.isNotEmpty;
+      isLoggedIn = after != null && after.isNotEmpty;
     });
 
     // Keep splash for 3 seconds
@@ -53,21 +123,28 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: widget.controller,
-      builder: (context, _) {
-        return MaterialApp(
-          debugShowCheckedModeBanner: false,
-          theme: getLightTheme(),
-          darkTheme: getDarkTheme(),
-          themeMode: widget.controller.mode,
-          home: showLaunchScreen
-              ? LaunchScreen(onLaunchComplete: _onLaunchComplete)
-              : (isLoggedIn == true //login screen->true
-              ? HomePage(controller: widget.controller)
-              : LoginPage(controller: widget.controller)),
-        );
-      },
+    return MultiProvider(
+      providers: [
+        Provider<ApiClient>.value(value: widget.api),
+        ChangeNotifierProvider<Capabilities>.value(value: widget.caps),
+      ],
+      child: AnimatedBuilder(
+        animation: widget.controller,
+        builder: (context, _) {
+          return MaterialApp(
+            navigatorKey: navigatorKey,
+            debugShowCheckedModeBanner: false,
+            theme: getLightTheme(),
+            darkTheme: getDarkTheme(),
+            themeMode: widget.controller.mode,
+            home: showLaunchScreen
+                ? LaunchScreen(onLaunchComplete: _onLaunchComplete)
+                : (isLoggedIn == true
+                    ? HomePage(controller: widget.controller)
+                    : LoginPage(controller: widget.controller)),
+          );
+        },
+      ),
     );
   }
 
@@ -77,6 +154,9 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// LaunchScreen and _LaunchScreenState: keep your existing code unchanged here.
+// ---------------------------------------------------------------------------
 class LaunchScreen extends StatefulWidget {
   final VoidCallback onLaunchComplete;
   const LaunchScreen({super.key, required this.onLaunchComplete});
@@ -152,7 +232,7 @@ class _LaunchScreenState extends State<LaunchScreen>
             FadeTransition(
               opacity: _textController1,
               child: Text(
-                'MumbaiMUN 2025',
+                'MumbaiMUN 2026',
                 style: textTheme.titleLarge?.copyWith(
                   color: scheme.onSurface,
                   fontWeight: FontWeight.bold,

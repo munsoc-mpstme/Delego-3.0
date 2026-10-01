@@ -81,9 +81,10 @@ class _LoginPageState extends State<LoginPage> {
         },
         encoding: Encoding.getByName('utf-8'),
       );
-      print('statusCode:${response.statusCode}');
-      print('statusBody:${response.body}');
-      print('Response headers: ${response.headers}');
+      // print('statusCode:${response.statusCode}');
+      // print('statusBody:${response.body}');
+      // print('Response headers: ${response.headers}');
+
       final responseData = json.decode(response.body);
       if (response.statusCode == 200) {
         final String token = responseData['access_token'];
@@ -127,7 +128,7 @@ class _LoginPageState extends State<LoginPage> {
           jsonEncode(data['teams'] ?? []),
         );
         await fetchAndStoreImage(id);
-        
+
         Navigator.push(
           context,
           MaterialPageRoute(
