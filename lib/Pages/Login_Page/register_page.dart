@@ -148,13 +148,13 @@ class _RegisterPageState extends State<RegisterPage> {
                 SizedBox(
                   height: 160,
                   width: 160,
-                  child: Image.asset("assets/icons/logo.png"),
+                  child: Image.asset("assets/images/logo_solid.webp"),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'DELEGO',
                   style: textTheme.headlineMedium?.copyWith(
-                    color: scheme.primary,
+                    color: scheme.tertiary,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.2,
                   ),
@@ -207,7 +207,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       child: Text(
                         'Login',
                         style: textTheme.bodyMedium?.copyWith(
-                          color: scheme.primary,
+                          color: scheme.tertiary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),

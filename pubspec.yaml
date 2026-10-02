@@ -38,6 +38,10 @@ dependencies:
   shared_preferences: ^2.3.2
   http: ^1.2.2
   syncfusion_flutter_pdfviewer: ^34.2.8
+  web_socket_channel: ^3.0.3
+  provider: ^6.1.5+1
+  connectivity_plus: ^7.3.2
+  qr_flutter: ^4.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -54,10 +58,15 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/icons/mm-logo-white-bg.png"
+  image_path: "assets/icons/app_icon.png"
+  remove_alpha_ios: true
   min_sdk_android: 26
-  adaptive_icon_background: "#ffffff"
-  adaptive_icon_foreground: "assets/icons/mm-logo-white-bg.png"
+  # Android adaptive icon: the background shows through behind the logo, which is kept
+  # inside the safe zone so no launcher shape can crop it. The monochrome layer is used
+  # by Android 13+ themed icons.
+  adaptive_icon_background: "#2342FF"
+  adaptive_icon_foreground: "assets/icons/app_icon_foreground.png"
+  adaptive_icon_monochrome: "assets/icons/app_icon_monochrome.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -72,6 +81,8 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/icons/
+    - assets/images/
+    - assets/images/committees/
     - assets/pdfs/
 
   # An image asset can refer to one or more resolution-specific "variants", see
@@ -139,8 +150,12 @@ flutter:
           weight: 100
         - asset: assets/fonts/Rubik-Light.ttf
           weight: 300
+        - asset: assets/fonts/Rubik-Medium.ttf
+          weight: 500
         - asset: assets/fonts/Rubik-Bold.ttf
           weight: 700
+        - asset: assets/fonts/Rubik-Black.ttf
+          weight: 900
 
     - family: Britanica
       fonts:

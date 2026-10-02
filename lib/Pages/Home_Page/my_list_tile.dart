@@ -25,14 +25,16 @@ class MyListTile extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 10, 20, 12),
         child: Row(
           children: [
-            Icon(icon, color: scheme.onSurface),
+            Icon(icon, color: scheme.tertiary),
             const SizedBox(width: 16),
             Expanded(
               child: Text(
                 text,
                 style: textTheme.bodyLarge?.copyWith(
                   color: scheme.onSurface,
-                  fontSize: 16,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
                 ),
               ),
             ),

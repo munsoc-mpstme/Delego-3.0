@@ -1,90 +1,128 @@
 import 'package:flutter/material.dart';
 
-// Brand seed color (purple)
-const kBrandSeed = Color(0xFF9C1BFF); // The exact brand color
+import '../widgets/neon.dart';
+
+// Brand colour: MumbaiMUN '26 electric blue.
+const kBrandSeed = Neon.blue;
+
+ThemeData _build(ColorScheme scheme, {required AppTokens tokens}) {
+  final onSurface = scheme.onSurface;
+  return ThemeData(
+    useMaterial3: true,
+    fontFamily: Neon.font,
+    colorScheme: scheme,
+    scaffoldBackgroundColor: scheme.surface,
+    extensions: [tokens],
+    appBarTheme: AppBarTheme(
+      backgroundColor: scheme.surface,
+      foregroundColor: onSurface,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      centerTitle: true,
+      titleTextStyle: TextStyle(
+        fontFamily: Neon.font,
+        fontWeight: FontWeight.w900,
+        fontSize: 18,
+        letterSpacing: 0.8,
+        color: onSurface,
+      ),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: scheme.primary,
+        foregroundColor: scheme.onPrimary,
+        textStyle: const TextStyle(
+            fontFamily: Neon.font, fontWeight: FontWeight.w900, letterSpacing: 0.6),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+    ),
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: scheme.primary,
+        foregroundColor: scheme.onPrimary,
+        textStyle: const TextStyle(
+            fontFamily: Neon.font, fontWeight: FontWeight.w900, letterSpacing: 0.6),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: scheme.surfaceContainerHighest,
+      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: scheme.outlineVariant),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: scheme.outlineVariant),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: scheme.tertiary, width: 2),
+      ),
+    ),
+    cardTheme: CardThemeData(
+      color: scheme.surfaceContainerHighest,
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    ),
+    dialogTheme: DialogThemeData(
+      backgroundColor: scheme.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    ),
+    drawerTheme: DrawerThemeData(
+      backgroundColor: scheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.horizontal(right: Radius.circular(28)),
+      ),
+    ),
+    dividerTheme: DividerThemeData(color: scheme.outlineVariant),
+  );
+}
 
 // --- THEME DATA DEFINITIONS ---
 
 ThemeData getLightTheme() {
-  // FIX: Manually create a ColorScheme.light to force the primary color.
-  final myCustomLightColorScheme = ColorScheme.light(
-    // Force the primary color to your exact brand color
-    primary: kBrandSeed,
-
-    // Define the color that will be used for text/icons *on* the primary color.
-    // Since kBrandSeed is dark, white is the best contrasting color for text.
-    onPrimary: Colors.white,
-    surface: const Color(0xFFFAFAFA),
-    onSurface: Colors.black87,
-
-    // Default secondary, which M3 would normally generate a good complement for.
-    // We'll use a slightly lighter purple or you can define your own secondary brand color here.
-    secondary: const Color(0xFFB570FF),
+  const scheme = ColorScheme.light(
+    primary: Neon.blue,
+    onPrimary: Neon.lime,
+    secondary: Neon.pink,
+    onSecondary: Neon.yellow,
+    tertiary: Neon.violet,
+    surface: Color(0xFFF2F4FF),
+    onSurface: Neon.navy,
+    surfaceContainerHighest: Color(0xFFE2E6FF),
+    surfaceContainerHigh: Color(0xFFFFFFFF),
+    outlineVariant: Color(0xFFC3C9F5),
+    error: Color(0xFFD7263D),
   );
-
-  return ThemeData(
-      colorScheme: myCustomLightColorScheme, // Use the custom scheme
-      useMaterial3: true,
-      extensions: [
-        const AppTokens(success: Color(0xFF388E3C), warning: Color(0xFFFBC02D))
-      ]
-  );
+  return _build(scheme,
+      tokens: const AppTokens(success: Color(0xFF1B9E5A), warning: Color(0xFFE0A100)));
 }
 
 ThemeData getDarkTheme() {
-  // FIX: Instead of using fromSeed, we manually create a ColorScheme
-  // to force the primary color to be the *exact* kBrandSeed value.
-  final myCustomDarkColorScheme = ColorScheme.dark(
-    // Force the primary color to your exact brand color
-    primary: kBrandSeed,
-
-    // Use a very dark grey for surfaces (like Cards, Dialogs)
-    surface: const Color(0xFF1A1A1A),
-
-    // Define the color that will be used for text/icons *on* the primary color
-    onPrimary: Colors.white,
-    onSurface: Colors.white70,
-
-    // --- NEW COLORS ADDED TO FIX TEAL BACKGROUNDS ---
-    // Text fields often use container colors for their fill in dark mode.
-    // Setting these to a subtle shade of purple or dark grey.
-    primaryContainer: const Color(0xFF2A0050), // Dark subtle purple tint
+  const scheme = ColorScheme.dark(
+    primary: Neon.blue,
+    onPrimary: Neon.lime,
+    secondary: Neon.pink,
+    onSecondary: Neon.yellow,
+    tertiary: Neon.lime,
+    surface: Neon.black,
+    onSurface: Colors.white,
+    surfaceContainerHighest: Color(0xFF1C1C1E),
+    surfaceContainerHigh: Color(0xFF141414),
+    outlineVariant: Color(0xFF2E2E30),
+    primaryContainer: Color(0xFF1B2A9E),
     onPrimaryContainer: Colors.white,
-
-    secondary: kBrandSeed, // Sometimes secondary is used, set it to the brand color
-    secondaryContainer: const Color(0xFF1A1A1A), // Dark grey, blending with surface/background
-    onSecondaryContainer: Colors.white70,
-    // -------------------------------------------------
-
-    // You can define other required colors here if they need to be specific:
-    // tertiary: ...,
-    error: Colors.red, // Added a standard error color
+    error: Color(0xFFFF5470),
   );
-
-  return ThemeData(
-    colorScheme: myCustomDarkColorScheme,
-    useMaterial3: true,
-    // Define extensions for the dark theme as well
-    extensions: [
-      const AppTokens(success: Color(0xFF66BB6A), warning: Color(0xFFFFB300))
-    ],
-    // Optional: You can explicitly set the Scaffold background to be the
-    // scheme's background color (which is now pure black)
-    scaffoldBackgroundColor: myCustomDarkColorScheme.surface,
-
-    // --- TEXT FIELD SPECIFIC TWEAKS ---
-    // If the above color scheme change is not enough, you can specifically style the input decoration theme.
-    inputDecorationTheme: InputDecorationTheme(
-      fillColor: myCustomDarkColorScheme.surface, // Force the fill to use the dark surface color
-      filled: true,
-      border: const OutlineInputBorder(
-        borderSide: BorderSide.none, // Hide the border for a cleaner look
-        borderRadius: BorderRadius.all(Radius.circular(8.0)),
-      ),
-      hoverColor: const Color(0xFF2A0050), // Subtle hover color
-    ),
-    // ------------------------------------
-  );
+  return _build(scheme,
+      tokens: const AppTokens(success: Neon.green, warning: Neon.yellow));
 }
 
 // --- THEME EXTENSION (Optional: custom tokens) ---
