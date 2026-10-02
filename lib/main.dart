@@ -11,6 +11,7 @@ import 'Theme/theme_controller.dart';
 
 // MUNDRA access layer
 import 'api/api_client.dart';
+import 'api/scan_queue.dart';
 import 'auth/capabilities.dart';
 import 'package:delego/constants/backend.dart';
 
@@ -26,19 +27,26 @@ Future<void> main() async {
   final api = ApiClient(baseUrl:Backend.baseUrl );
   final caps = Capabilities(api);
 
-  runApp(MyApp(controller: controller, api: api, caps: caps));
+  // Loads saved scans, listens for connectivity and syncs.
+  final scanQueue = ScanQueue(api);
+  await scanQueue.start();
+
+  runApp(MyApp(
+      controller: controller, api: api, caps: caps, scanQueue: scanQueue));
 }
 
 class MyApp extends StatefulWidget {
   final ThemeController controller;
   final ApiClient api;
   final Capabilities caps;
+  final ScanQueue scanQueue;
 
   const MyApp({
     super.key,
     required this.controller,
     required this.api,
     required this.caps,
+    required this.scanQueue,
   });
 
   @override
@@ -127,6 +135,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       providers: [
         Provider<ApiClient>.value(value: widget.api),
         ChangeNotifierProvider<Capabilities>.value(value: widget.caps),
+        ChangeNotifierProvider<ScanQueue>.value(value: widget.scanQueue),
       ],
       child: AnimatedBuilder(
         animation: widget.controller,

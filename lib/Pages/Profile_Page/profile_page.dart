@@ -1,5 +1,7 @@
 import 'package:delego/Pages/Login_Page/login_page.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:delego/api/scan_queue.dart';
 import 'package:delego/constants/backend.dart';
 import 'package:delego/Pages/Profile_Page/text_box.dart';
 import 'package:http/http.dart' as http;
@@ -98,6 +100,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     ) ?? false;
     if (confirmDelete) {
+      final queue = context.read<ScanQueue>();
       try {
         final response = await http.delete(
           Uri.parse('${Backend.baseUrl}/account'),
@@ -105,6 +108,7 @@ class _ProfilePageState extends State<ProfilePage> {
         );
         if (response.statusCode == 200) {
           await prefs.clear();
+          await queue.clearAll(); // the account is gone: drop its saved scans
           Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (context) => LoginPage(controller: widget.controller)),

@@ -39,6 +39,7 @@ dependencies:
   provider: ^6.1.0
   http: ^1.2.2
   syncfusion_flutter_pdfviewer: ^34.2.8
+  connectivity_plus: ^6.0.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -7,10 +7,11 @@ import 'package:delego/Pages/Room_Page/room_page.dart';
 import 'package:delego/Pages/Schedule_Page/schedule_page.dart';
 import 'package:delego/Pages/Study Guides/study_guidespage.dart';
 import 'package:delego/Pages/Qr_Page/Qr_code.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:delego/Theme/theme_controller.dart';
 import 'package:delego/Pages/Qr_Page/Qr_scanner.dart';
 import 'package:delego/auth/capabilities.dart';
+import 'package:delego/api/api_client.dart';
+import 'package:delego/api/scan_queue.dart';
 
 class HomePage extends StatefulWidget {
   final ThemeController controller;
@@ -23,8 +24,39 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   Future<void> signOut() async {
     final caps = context.read<Capabilities>();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
+    final api = context.read<ApiClient>();
+    final queue = context.read<ScanQueue>();
+
+    // Saved scans stay on the phone and sync after the next login, so warn.
+    final waiting = queue.pendingCount;
+    if (waiting > 0) {
+      final proceed = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Unsynced scans'),
+              content: Text(
+                '$waiting meal ${waiting == 1 ? 'scan has' : 'scans have'} not '
+                'reached the server yet. They stay saved on this phone and '
+                'sync after you sign in again (under that account).',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(true),
+                  child: const Text('Sign out anyway'),
+                ),
+              ],
+            ),
+          ) ??
+          false;
+      if (!proceed) return;
+    }
+
+    // Token only: prefs.clear() would also delete saved scans and the theme.
+    await api.clearToken();
     caps.clear(); // forget permissions so the next login starts fresh
 
     if (!mounted) return;

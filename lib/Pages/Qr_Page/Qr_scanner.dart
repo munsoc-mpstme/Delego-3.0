@@ -7,6 +7,8 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 
 import 'package:delego/api/api_client.dart';
+import 'package:delego/api/scan_queue.dart';
+import 'package:delego/Pages/Qr_Page/scan_history.dart';
 import 'package:delego/auth/capabilities.dart';
 
 /// value = what is sent to the server, label = what the operator sees.
@@ -23,7 +25,7 @@ const kDiets = <({String value, String label})>[
   (value: 'jain', label: 'Jain'),
 ];
 
-enum _Outcome { served, duplicate, error }
+enum _Outcome { served, duplicate, queued, error }
 
 class _ScanResult {
   _ScanResult(this.outcome, this.message, {this.name, this.diet});
@@ -55,9 +57,22 @@ class _QrScannerState extends State<QrScanner> {
   String? _diet; // must be chosen before scanning
   Timer? _poll;
 
+  late final ScanQueue _queue;
+  StreamSubscription<String>? _rejectSub;
+  int _lastPending = 0;
+
   @override
   void initState() {
     super.initState();
+    _queue = context.read<ScanQueue>();
+    _lastPending = _queue.pendingCount;
+    _queue.addListener(_onQueueChanged);
+    // A saved scan the server turned down: tell the operator once.
+    _rejectSub = _queue.rejections.listen((msg) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(msg)));
+    });
     _loadCounts();
     // Other counters may be scanning too, so also refresh periodically.
     _poll = Timer.periodic(const Duration(seconds: 10), (_) => _loadCounts());
@@ -66,8 +81,17 @@ class _QrScannerState extends State<QrScanner> {
   @override
   void dispose() {
     _poll?.cancel();
+    _queue.removeListener(_onQueueChanged);
+    _rejectSub?.cancel();
     controller.dispose();
     super.dispose();
+  }
+
+  // Saved scans just reached the server: pull the fresh counts.
+  void _onQueueChanged() {
+    final now = _queue.pendingCount;
+    if (now < _lastPending) _loadCounts();
+    _lastPending = now;
   }
 
   // ---------------------------------------------------------------- counts
@@ -150,9 +174,10 @@ class _QrScannerState extends State<QrScanner> {
       .where((e) => e.key != 'total')
       .fold(0, (sum, e) => sum + e.value);
 
+  // Server count + scans still saved on this phone, so numbers keep moving offline.
   int _countFor(String diet) => diet == 'all'
-      ? (_counts['total'] ?? _sumDiets(_counts))
-      : (_counts[diet] ?? 0);
+      ? (_counts['total'] ?? _sumDiets(_counts)) + _queue.pendingFor(_meal)
+      : (_counts[diet] ?? 0) + _queue.pendingFor(_meal, diet: diet);
 
   String _fmt(String diet) => _countsLoaded ? '${_countFor(diet)}' : '–';
 
@@ -289,77 +314,84 @@ class _QrScannerState extends State<QrScanner> {
   }
 
   Future<_ScanResult> _submit(String delegateId) async {
-    final api = context.read<ApiClient>();
-    final dietLabel =
-        kDiets.firstWhere((d) => d.value == _diet).label.toUpperCase();
-    try {
-      // Form-encoded, not JSON. The server derives the day from event dates.
-      final res = await api.postForm('/food/scans', {
-        'delegate_id': delegateId,
-        'meal': _meal,
-        'diet': _diet!, // the plate type the operator is serving
-      });
-
-      Map<String, dynamic> body = {};
-      try {
-        body = jsonDecode(res.body) as Map<String, dynamic>;
-      } catch (_) {}
-
-      if (res.statusCode >= 200 && res.statusCode < 300) {
-        final r = body['result'];
-        final name = body['name']?.toString();
-        final diet = (body['food_preference'] ?? body['diet'])?.toString();
-        if (r == 'served') {
-          return _ScanResult(_Outcome.served, 'SERVED · $dietLabel',
-              name: name, diet: diet);
-        }
-        if (r == 'duplicate') {
-          return _ScanResult(_Outcome.duplicate, 'ALREADY SERVED',
-              name: name, diet: diet);
-        }
-        return _ScanResult(_Outcome.error, 'Unexpected response');
-      }
-
-      // Non-2xx. FastAPI puts the reason in "detail".
-      final detail = body['detail']?.toString();
-      if (res.statusCode == 404) {
-        return _ScanResult(_Outcome.error, detail ?? 'Delegate not found');
-      }
-      if (res.statusCode == 422) {
-        return _ScanResult(
-            _Outcome.error, detail ?? 'Invalid QR code or meal');
-      }
-      return _ScanResult(
-          _Outcome.error,
-          detail ??
-              'Scan failed (${res.statusCode}). '
-                  'Check the event dates are set.');
-    } on Forbidden {
-      return _ScanResult(_Outcome.error, 'You no longer have scan access');
-    } on SessionExpired {
-      return _ScanResult(_Outcome.error, 'Session expired. Log in again.');
-    } catch (_) {
-      return _ScanResult(_Outcome.error, 'Network error. Try again.');
-    }
+    final o = await _queue.post(
+      delegateId: delegateId,
+      meal: _meal,
+      diet: _diet!,
+    );
+    return switch (o.kind) {
+      ScanKind.served =>
+        _ScanResult(_Outcome.served, o.message, name: o.name, diet: o.diet),
+      ScanKind.duplicate => _ScanResult(_Outcome.duplicate, o.message,
+          name: o.name, diet: o.diet),
+      ScanKind.queued => _ScanResult(_Outcome.queued, o.message,
+          name: null, diet: _diet),
+      ScanKind.rejected || ScanKind.denied =>
+        _ScanResult(_Outcome.error, o.message),
+    };
   }
 
   Color _colorFor(_Outcome o) => switch (o) {
         _Outcome.served => Colors.green.shade700,
         _Outcome.duplicate => Colors.red.shade700,
+        _Outcome.queued => Colors.blue.shade700,
         _Outcome.error => Colors.orange.shade800,
       };
 
   IconData _iconFor(_Outcome o) => switch (o) {
         _Outcome.served => Icons.check_circle,
         _Outcome.duplicate => Icons.block,
+        _Outcome.queued => Icons.cloud_upload_outlined,
         _Outcome.error => Icons.warning_amber_rounded,
       };
+
+  Widget _banner(ScanQueue q, ColorScheme scheme) {
+    final n = q.pendingCount;
+    String? text;
+    Color color = Colors.blue.shade700;
+    if (q.blockedReason != null && n > 0) {
+      text = '${q.blockedReason} $n ${n == 1 ? 'scan is' : 'scans are'} kept saved.';
+      color = scheme.error;
+    } else if (q.syncing && n > 0) {
+      text = 'Syncing $n ${n == 1 ? 'scan' : 'scans'}';
+    } else if (q.offline) {
+      text = n > 0
+          ? 'Offline · $n ${n == 1 ? 'scan' : 'scans'} saved, will sync automatically'
+          : 'Offline · scans will be saved and sync automatically';
+      color = Colors.orange.shade800;
+    } else if (n > 0) {
+      text = '$n ${n == 1 ? 'scan' : 'scans'} waiting to sync';
+    }
+    if (text == null) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      color: color,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(text,
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w600)),
+          ),
+          if (n > 0 && !q.syncing)
+            TextButton(
+              onPressed: q.flush,
+              style: TextButton.styleFrom(foregroundColor: Colors.white),
+              child: const Text('Sync now'),
+            ),
+        ],
+      ),
+    );
+  }
 
   // ----------------------------------------------------------------- build
 
   @override
   Widget build(BuildContext context) {
     final caps = context.watch<Capabilities>();
+    final queue = context.watch<ScanQueue>();
     final scheme = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
 
@@ -394,11 +426,25 @@ class _QrScannerState extends State<QrScanner> {
       appBar: AppBar(
         title: const Text('Meal Scanner'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            tooltip: 'Unsynced scans and history',
+            icon: Badge(
+              isLabelVisible: queue.pendingCount > 0,
+              label: Text('${queue.pendingCount}'),
+              child: const Icon(Icons.history),
+            ),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ScanHistoryPage()),
+            ),
+          ),
+        ],
       ),
       body: Stack(
         children: [
           Column(
             children: [
+              _banner(queue, scheme),
               Padding(
                 padding: const EdgeInsets.all(12),
                 child: SegmentedButton<String>(
