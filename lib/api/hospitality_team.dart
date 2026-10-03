@@ -4,11 +4,18 @@ import 'package:http/http.dart' as http;
 
 import 'api_client.dart';
 
-/// The team that scans delegate QR codes for food. Its one permission is
-/// food.manage_entitlement, which the server turns into the scanner for its members.
+/// The team that serves food. Its members scan delegate QR codes (food.manage_entitlement)
+/// and answer break requests in the committee chats (chat.view to read them, chat.post
+/// to accept or reject). The server turns these into the scanner and the accept / reject
+/// buttons for whoever is on the team.
 const kHospitalityTeamName = 'Hospitality';
-const kHospitalityPermission = 'food.manage_entitlement';
-const kHospitalityDescription = 'Scans delegate QR codes for food';
+const kHospitalityPermissions = [
+  'food.manage_entitlement',
+  'chat.view',
+  'chat.post',
+];
+const kHospitalityDescription =
+    'Scans delegate QR codes for food and answers break requests';
 
 /// A server refusal with a message that can be shown to the person using the screen.
 class TeamApiException implements Exception {
@@ -75,6 +82,7 @@ class HospitalityTeamApi {
     if (team == null) return HospitalityState(eventId: eventId);
 
     final teamId = (team['id'] as num).toInt();
+    await _ensurePermissions(teamId, team['permissions']);
     final roster = _list(await _api.get('/teams/$teamId/members'),
         'Could not load the team members');
     return HospitalityState(
@@ -91,13 +99,29 @@ class HospitalityTeamApi {
     );
   }
 
-  /// Create the team with only the food-scanning permission. A 409 means it already
-  /// exists (someone else just made it), which is fine.
+  /// A team made by an earlier version of the app only had the food permission. Add the
+  /// chat ones (keeping anything else it has) so its members can answer break requests.
+  Future<void> _ensurePermissions(int teamId, Object? current) async {
+    final have = <String>[
+      if (current is List) for (final p in current) '$p',
+    ];
+    if (kHospitalityPermissions.every(have.contains)) return;
+    final res = await _api.patchJson('/teams/$teamId/permissions', {
+      'permissions': {...have, ...kHospitalityPermissions}.toList(),
+    });
+    if (res.statusCode != 200) {
+      throw TeamApiException(
+          _detail(res, "Could not update the team's permissions"));
+    }
+  }
+
+  /// Create the team with the permissions above. A 409 means it already exists (someone
+  /// else just made it), which is fine.
   Future<void> createTeam(int eventId) async {
     final res = await _api.postJson('/events/$eventId/teams', {
       'name': kHospitalityTeamName,
       'description': kHospitalityDescription,
-      'permissions': [kHospitalityPermission],
+      'permissions': kHospitalityPermissions,
     });
     if (res.statusCode == 201 || res.statusCode == 409) return;
     throw TeamApiException(_detail(res, 'Could not create the team'));

@@ -30,9 +30,15 @@ class FakeApi extends ApiClient {
   Future<http.Response> postJson(String path, Object body) async =>
       _answer('POST', path, body);
   @override
+  Future<http.Response> patchJson(String path, Object body) async =>
+      _answer('PATCH', path, body);
+  @override
   Future<http.Response> delete(String path) async =>
       _answer('DELETE', path, null);
 }
+
+/// What a Hospitality team made by the current app holds.
+const _all = ['food.manage_entitlement', 'chat.view', 'chat.post'];
 
 http.Response json(Object body, [int status = 200]) =>
     http.Response(jsonEncode(body), status);
@@ -58,7 +64,7 @@ void main() {
         ..routes['GET /events'] = ((_) => json([{'id': 1}]))
         ..routes['GET /events/1/teams'] = ((_) => json([
               {'id': 3, 'name': 'Rapporteurs'},
-              {'id': 9, 'name': 'hospitality'},
+              {'id': 9, 'name': 'hospitality', 'permissions': _all},
             ]))
         ..routes['GET /teams/9/members'] = ((_) => json([
               {'email': 'a@x.com', 'name': 'Asha Rao', 'status': 'member'},
@@ -72,20 +78,69 @@ void main() {
       expect(s.members.map((m) => m.invited), [false, true]);
     });
 
-    test('creating sends only the food permission; a 409 counts as done',
+    test('creating sends the food and chat permissions; a 409 counts as done',
         () async {
       final api = FakeApi()
         ..routes['POST /events/1/teams'] = ((_) => json({'id': 9}, 201));
       await HospitalityTeamApi(api).createTeam(1);
       expect(api.bodies['POST /events/1/teams'], {
         'name': 'Hospitality',
-        'description': 'Scans delegate QR codes for food',
-        'permissions': ['food.manage_entitlement'],
+        'description': 'Scans delegate QR codes for food and answers break requests',
+        'permissions': ['food.manage_entitlement', 'chat.view', 'chat.post'],
       });
 
       api.routes['POST /events/1/teams'] =
           ((_) => json({'detail': 'A team with that name already exists'}, 409));
       await HospitalityTeamApi(api).createTeam(1); // does not throw
+    });
+
+    test('a team made by an older app version gets the chat permissions added',
+        () async {
+      final api = FakeApi()
+        ..routes['GET /events'] = ((_) => json([{'id': 1}]))
+        ..routes['GET /events/1/teams'] = ((_) => json([
+              {
+                'id': 9,
+                'name': 'Hospitality',
+                'permissions': ['food.manage_entitlement', 'team.extra'],
+              }
+            ]))
+        ..routes['PATCH /teams/9/permissions'] = ((_) => json({'id': 9}))
+        ..routes['GET /teams/9/members'] = ((_) => json([]));
+
+      await HospitalityTeamApi(api).load();
+
+      final sent =
+          (api.bodies['PATCH /teams/9/permissions'] as Map)['permissions'] as List;
+      // Keeps what it had and adds what was missing.
+      expect(sent.toSet(), {..._all, 'team.extra'});
+    });
+
+    test('a complete team is left alone (no permission update)', () async {
+      final api = FakeApi()
+        ..routes['GET /events'] = ((_) => json([{'id': 1}]))
+        ..routes['GET /events/1/teams'] = ((_) => json([
+              {'id': 9, 'name': 'Hospitality', 'permissions': _all}
+            ]))
+        ..routes['GET /teams/9/members'] = ((_) => json([]));
+
+      await HospitalityTeamApi(api).load();
+
+      expect(api.calls.where((c) => c.startsWith('PATCH')), isEmpty);
+    });
+
+    test('if the permission update is refused, the reason is shown', () async {
+      final api = FakeApi()
+        ..routes['GET /events'] = ((_) => json([{'id': 1}]))
+        ..routes['GET /events/1/teams'] = ((_) => json([
+              {'id': 9, 'name': 'Hospitality', 'permissions': ['food.manage_entitlement']}
+            ]))
+        ..routes['PATCH /teams/9/permissions'] =
+            ((_) => json({'detail': 'Unknown permission'}, 422));
+
+      expect(HospitalityTeamApi(api).load(),
+          throwsA(isA<TeamApiException>().having(
+              (e) => e.message, 'message', 'Unknown permission')));
     });
 
     test('adding reports member vs invited, and surfaces the server reason',
@@ -145,7 +200,7 @@ void main() {
       final api = FakeApi()
         ..routes['GET /events'] = ((_) => json([{'id': 1}]))
         ..routes['GET /events/1/teams'] = ((_) => json(created
-            ? [{'id': 9, 'name': 'Hospitality'}]
+            ? [{'id': 9, 'name': 'Hospitality', 'permissions': _all}]
             : <Object>[]))
         ..routes['GET /teams/9/members'] = ((_) => json([]))
         ..routes['POST /events/1/teams'] = ((_) {
@@ -170,7 +225,7 @@ void main() {
       final api = FakeApi()
         ..routes['GET /events'] = ((_) => json([{'id': 1}]))
         ..routes['GET /events/1/teams'] =
-            ((_) => json([{'id': 9, 'name': 'Hospitality'}]))
+            ((_) => json([{'id': 9, 'name': 'Hospitality', 'permissions': _all}]))
         ..routes['GET /teams/9/members'] = ((_) => json(roster))
         ..routes['POST /teams/9/members'] = ((b) {
           roster.add({
@@ -197,7 +252,7 @@ void main() {
       final api = FakeApi()
         ..routes['GET /events'] = ((_) => json([{'id': 1}]))
         ..routes['GET /events/1/teams'] =
-            ((_) => json([{'id': 9, 'name': 'Hospitality'}]))
+            ((_) => json([{'id': 9, 'name': 'Hospitality', 'permissions': _all}]))
         ..routes['GET /teams/9/members'] = ((_) => json([]));
 
       await show(tester, api);
@@ -216,7 +271,7 @@ void main() {
       final api = FakeApi()
         ..routes['GET /events'] = ((_) => json([{'id': 1}]))
         ..routes['GET /events/1/teams'] =
-            ((_) => json([{'id': 9, 'name': 'Hospitality'}]))
+            ((_) => json([{'id': 9, 'name': 'Hospitality', 'permissions': _all}]))
         ..routes['GET /teams/9/members'] = ((_) => json(roster))
         ..routes['DELETE /teams/9/members/asha%40x.com'] = ((_) {
           roster.clear();

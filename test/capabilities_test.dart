@@ -13,7 +13,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 const _serverPermissions = <String, List<String>>{
   'delegate': ['badge.view', 'guides.view'],
   'eb': ['badge.view', 'eb.tools', 'guides.view'],
-  'oc': ['chat.respond', 'chat.send_request', 'chat.view', 'eb.tools', 'food.scan'],
+  'oc': ['chat.send_request', 'chat.view', 'eb.tools', 'food.scan'],
+  // A Hospitality team member who is otherwise a plain delegate.
+  'hospitality': [
+    'badge.view',
+    'chat.respond',
+    'chat.view',
+    'food.scan',
+    'guides.view',
+  ],
   'admin': [
     'admin.roles',
     'badge.view',
@@ -88,7 +96,6 @@ void main() {
       Perm.foodScan,
       Perm.chatView,
       Perm.chatSendRequest,
-      Perm.chatRespond,
     ]) {
       expect(caps.can(p), isTrue, reason: p);
     }
@@ -96,6 +103,20 @@ void main() {
       expect(caps.can(p), isFalse, reason: p);
     }
     expect(caps.isAdmin, isFalse);
+  });
+
+  test('oc can request a break but not accept or reject one', () async {
+    final caps = await loadAs('oc');
+    expect(caps.can(Perm.chatSendRequest), isTrue);
+    expect(caps.can(Perm.chatRespond), isFalse);
+  });
+
+  test('a Hospitality member can accept or reject but not request', () async {
+    final caps = await loadAs('hospitality');
+    expect(caps.can(Perm.chatRespond), isTrue);
+    expect(caps.can(Perm.chatView), isTrue);
+    expect(caps.can(Perm.foodScan), isTrue);
+    expect(caps.can(Perm.chatSendRequest), isFalse);
   });
 
   test('admin: everything, including role changes', () async {
