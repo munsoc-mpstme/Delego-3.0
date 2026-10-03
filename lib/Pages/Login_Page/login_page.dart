@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:delego/Pages/Login_Page/register_page.dart';
+import 'package:delego/Pages/Login_Page/verify_email_page.dart';
 import 'package:delego/Pages/Home_Page/home_page.dart';
 import 'package:delego/constants/backend.dart';
 import 'package:delego/Pages/Login_Page/forgot_password.dart';
@@ -38,6 +39,20 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> clearPref() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
+  }
+
+  /// Open the code screen for an account that has not verified its email yet.
+  Future<void> _verifyEmail(String email) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final verified = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => VerifyEmailPage(email: email)),
+    );
+    if (verified == true) {
+      messenger.showSnackBar(const SnackBar(
+        content: Text('Email verified. Log in with your password.'),
+      ));
+    }
   }
 
   void signUserIn() async {
@@ -91,11 +106,9 @@ class _LoginPageState extends State<LoginPage> {
         print("data=$data"); //printing the data returned from the backend
 
         if (data['detail'] == 'Please verify your email!') {
+          await prefs.remove('token'); // not signed in until the email is verified
           Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(data['detail']),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ));
+          await _verifyEmail(email);
           return;
         }
 
@@ -143,6 +156,11 @@ class _LoginPageState extends State<LoginPage> {
             ),
           );
         }
+      } else if (response.statusCode == 403 &&
+          responseData['detail'].toString().toLowerCase().contains('verify')) {
+        // Right password, but the emailed code has not been entered yet.
+        Navigator.of(context).pop();
+        await _verifyEmail(email);
       } else {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(

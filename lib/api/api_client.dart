@@ -10,7 +10,7 @@ class Forbidden implements Exception {}
 class ApiClient {
   ApiClient({required this.baseUrl});
 
-  final String baseUrl; // e.g. https://mundra.munsocietympstme.com
+  final String baseUrl; // e.g. https://mundra.onrender.com
 
   /// Set from main(): clear state and go to login.
   void Function()? onUnauthorized;

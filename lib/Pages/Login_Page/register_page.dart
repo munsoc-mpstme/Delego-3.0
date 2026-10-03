@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:delego/constants/backend.dart';
+import 'package:delego/Pages/Login_Page/verify_email_page.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -81,12 +82,35 @@ class _RegisterPageState extends State<RegisterPage> {
       Navigator.of(context).pop();
 
       if (response.statusCode == 201) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text("Registration successful. Please verify your email."),
-            backgroundColor: scheme.primary,
+        // The account exists but cannot log in until the emailed code is entered.
+        // (A server that does not report `verified` has already verified them.)
+        final unverified = responseData['verified'] == false;
+        if (!unverified) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text("Registration successful. You can log in now."),
+              backgroundColor: scheme.primary,
+            ),
+          );
+          return;
+        }
+        final messenger = ScaffoldMessenger.of(context);
+        final verified = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => VerifyEmailPage(
+              email: email,
+              emailSent: responseData['email_sent'] != false,
+            ),
           ),
         );
+        if (!mounted) return;
+        if (verified == true) {
+          Navigator.pop(context); // back to the login page
+          messenger.showSnackBar(const SnackBar(
+            content: Text('Email verified. Log in with your password.'),
+          ));
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
