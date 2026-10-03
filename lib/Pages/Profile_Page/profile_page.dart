@@ -2,6 +2,8 @@ import 'package:delego/Pages/Login_Page/login_page.dart';
 import 'package:flutter/material.dart';
 import 'package:delego/constants/backend.dart';
 import 'package:delego/Pages/Profile_Page/text_box.dart';
+import 'package:provider/provider.dart';
+import 'package:delego/api/scan_queue.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,7 +18,7 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  String? id, firstname, lastname, email, contact, dateofbirth, gender;
+  String? id, firstname, lastname, email, contact, dateofbirth, gender, diet;
 
   Future<void> loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
@@ -28,8 +30,10 @@ class _ProfilePageState extends State<ProfilePage> {
       contact = prefs.getString('contact');
       dateofbirth = prefs.getString('dateofbirth');
       gender = prefs.getString('gender');
+      diet = prefs.getString('diet');
       if (contact == '') contact = '-';
       if (gender == '') gender = 'Prefer not to say';
+      if (diet == '') diet = 'Not Set';
       if (dateofbirth == '') dateofbirth = 'dd-mm-yyyy';
     });
   }
@@ -46,6 +50,8 @@ class _ProfilePageState extends State<ProfilePage> {
         field = 'dateofbirth'; break;
       case 'Gender':
         field = 'gender'; break;
+      case 'Food Preference':
+        field = 'diet'; break;
     }
     final prefs = await SharedPreferences.getInstance();
     prefs.setString(field, newValue);
@@ -67,6 +73,7 @@ class _ProfilePageState extends State<ProfilePage> {
           case 'contact': field = 'Contact Number'; break;
           case 'dateofbirth': field = 'Date of Birth'; break;
           case 'gender': field = 'Gender'; break;
+          case 'diet': field = 'Food Preference'; break;
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("$field updated successfully!"), backgroundColor: Colors.green),
@@ -98,6 +105,7 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     ) ?? false;
     if (confirmDelete) {
+      final queue = context.read<ScanQueue>();
       try {
         final response = await http.delete(
           Uri.parse('${Backend.baseUrl}/account'),
@@ -105,6 +113,7 @@ class _ProfilePageState extends State<ProfilePage> {
         );
         if (response.statusCode == 200) {
           await prefs.clear();
+          await queue.clearAll();
           Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(builder: (context) => LoginPage(controller: widget.controller)),
@@ -133,26 +142,49 @@ class _ProfilePageState extends State<ProfilePage> {
 
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: scheme.surface,
-        title: Text("Edit $field", style: textTheme.titleMedium?.copyWith(color: scheme.onSurface)),
-        content: TextField(
-          autofocus: true,
-          style: textTheme.bodyMedium?.copyWith(color: scheme.onSurface),
-          decoration: InputDecoration(
-            hintText: field == 'Date of Birth' ? "dd-mm-yyyy" : "Enter new $field",
-            hintStyle: textTheme.bodyMedium?.copyWith(color: scheme.onSurface.withValues(alpha: 0.5)),
-          ),
-          onChanged: (value) => newValue = value,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: textTheme.bodyMedium?.copyWith(color: scheme.primary)),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.of(context).pop();
+      builder: (context) {
+        String dropDownValue = newValue.isEmpty || newValue == 'Not Set' ? 'non-jain' : newValue;
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              backgroundColor: scheme.surface,
+              title: Text("Edit $field", style: textTheme.titleMedium?.copyWith(color: scheme.onSurface)),
+              content: field == 'Food Preference' 
+                ? DropdownButton<String>(
+                    value: dropDownValue,
+                    isExpanded: true,
+                    dropdownColor: scheme.surface,
+                    style: textTheme.bodyMedium?.copyWith(color: scheme.onSurface),
+                    items: const [
+                      DropdownMenuItem(value: 'non-jain', child: Text('Non-Jain')),
+                      DropdownMenuItem(value: 'jain', child: Text('Jain')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        setStateDialog(() {
+                          dropDownValue = val;
+                          newValue = val;
+                        });
+                      }
+                    },
+                  )
+                : TextField(
+                    autofocus: true,
+                    style: textTheme.bodyMedium?.copyWith(color: scheme.onSurface),
+                    decoration: InputDecoration(
+                      hintText: field == 'Date of Birth' ? "dd-mm-yyyy" : "Enter new $field",
+                      hintStyle: textTheme.bodyMedium?.copyWith(color: scheme.onSurface.withValues(alpha: 0.5)),
+                    ),
+                    onChanged: (value) => newValue = value,
+                  ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cancel', style: textTheme.bodyMedium?.copyWith(color: scheme.primary)),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    Navigator.of(context).pop();
               if (field == 'Date of Birth') {
                 final datePattern = RegExp(r"^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-(\d{4})$");
                 if (!datePattern.hasMatch(newValue)) {
@@ -189,9 +221,12 @@ class _ProfilePageState extends State<ProfilePage> {
             child: Text('Save', style: textTheme.bodyMedium?.copyWith(color: scheme.primary)),
           ),
         ],
-      ),
+      );
+     },
     );
-  }
+   },
+  );
+}
 
   @override
   void initState() {
@@ -250,6 +285,11 @@ class _ProfilePageState extends State<ProfilePage> {
             text: dateofbirth ?? 'Date of Birth',
             sectionName: 'Date of Birth',
             onPressed: () => editField('Date of Birth', dateofbirth ?? ''),
+          ),
+          MyTextBox(
+            text: diet ?? 'Not Set',
+            sectionName: 'Food Preference',
+            onPressed: () => editField('Food Preference', diet ?? ''),
           ),
           // MyTextBox(
           //   text: gender ?? 'Gender',

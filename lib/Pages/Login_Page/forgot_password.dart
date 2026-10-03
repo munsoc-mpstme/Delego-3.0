@@ -95,7 +95,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Image.asset(
-                    "assets/icons/logo.png",
+                    "assets/images/logo_solid.webp",
                     fit: BoxFit.contain,
                   ),
                 ),
@@ -106,7 +106,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                 Text(
                   'DELEGO',
                   style: textTheme.headlineMedium?.copyWith(
-                    color: scheme.primary,
+                    color: scheme.tertiary,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.2,
                   ),
@@ -187,7 +187,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                       child: Text(
                         'Login',
                         style: textTheme.bodyMedium?.copyWith(
-                          color: scheme.primary,
+                          color: scheme.tertiary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),

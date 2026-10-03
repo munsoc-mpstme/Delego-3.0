@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ThemeController extends ChangeNotifier {
   static const _themeKey = 'theme_mode';
-  ThemeMode _mode = ThemeMode.system;
+  ThemeMode _mode = ThemeMode.dark; // the neon look is dark-first
 
   ThemeMode get mode => _mode;
 
@@ -19,8 +19,11 @@ class ThemeController extends ChangeNotifier {
       case 'dark':
         _mode = ThemeMode.dark;
         break;
-      default:
+      case 'system':
         _mode = ThemeMode.system;
+        break;
+      default:
+        _mode = ThemeMode.dark;
     }
     notifyListeners();
   }

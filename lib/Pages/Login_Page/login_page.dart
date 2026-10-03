@@ -8,6 +8,9 @@ import 'package:delego/Pages/Home_Page/home_page.dart';
 import 'package:delego/constants/backend.dart';
 import 'package:delego/Pages/Login_Page/forgot_password.dart';
 import 'package:delego/Theme/theme_controller.dart';
+import 'package:delego/auth/capabilities.dart';
+import 'package:provider/provider.dart';
+
 
 class LoginPage extends StatefulWidget {
   final ThemeController controller;
@@ -21,16 +24,6 @@ class _LoginPageState extends State<LoginPage> {
   final usernameController = TextEditingController();
   final passwordController = TextEditingController();
 
-  Future<void> fetchAndStoreImage(String id) async {
-    try {
-      final response = await http.get(Uri.parse(Backend.baseUrl + '/qr?id=$id'));
-      if (response.statusCode == 200) {
-        String base64Image = base64Encode(response.bodyBytes);
-        SharedPreferences prefs = await SharedPreferences.getInstance();
-        await prefs.setString('qr', base64Image);
-      }
-    } catch (_) {}
-  }
 
   Future<void> setLoggedInBefore() async {
     final prefs = await SharedPreferences.getInstance();
@@ -79,9 +72,10 @@ class _LoginPageState extends State<LoginPage> {
         },
         encoding: Encoding.getByName('utf-8'),
       );
-      print('statusCode:${response.statusCode}');
-      print('statusBody:${response.body}');
-      print('Response headers: ${response.headers}');
+      // print('statusCode:${response.statusCode}');
+      // print('statusBody:${response.body}');
+      // print('Response headers: ${response.headers}');
+
       final responseData = json.decode(response.body);
       if (response.statusCode == 200) {
         final String token = responseData['access_token'];
@@ -93,6 +87,8 @@ class _LoginPageState extends State<LoginPage> {
           headers: {'Authorization': 'Bearer $token'},
         );
         final data = json.decode(response2.body);
+
+        print("data=$data"); //printing the data returned from the backend
 
         if (data['detail'] == 'Please verify your email!') {
           Navigator.of(context).pop();
@@ -111,7 +107,12 @@ class _LoginPageState extends State<LoginPage> {
         await prefs.setString('contact', data['contact'] ?? '');
         await prefs.setString('dateofbirth', data['dateofbirth'] ?? '');
         await prefs.setString('gender', data['gender'] ?? '');
-        await fetchAndStoreImage(id);
+        await prefs.setString('role', data['role'] ?? '');
+
+        // Permissions come from the server; load them before the home screen decides
+        // what to show (the sign-in token is already saved, so the call is authorised).
+        await context.read<Capabilities>().refresh();
+        if (!mounted) return;
 
         Navigator.push(
           context,
@@ -151,54 +152,55 @@ class _LoginPageState extends State<LoginPage> {
           ),
         );
       }
-    }catch (e) {
-  Navigator.of(context).pop();
-  
-  print('Error: $e');
-  print('Error Type: ${e.runtimeType}');
-  
-  String errorMessage = "An error occurred";
-  
-  try {
-    // Try to parse error from response
-    if (e.toString().contains('Bad state') || e.toString().contains('SocketException')) {
-      errorMessage = "Cannot connect to server";
-    } else {
-      // Extract error message from exception string
-      final errorString = e.toString();
-      
-      // If it contains JSON-like content, try to parse it
-      if (errorString.contains('{')) {
-        final jsonMatch = RegExp(r'\{.*\}').firstMatch(errorString);
-        if (jsonMatch != null) {
-          final jsonStr = jsonMatch.group(0);
-          final jsonResponse = jsonDecode(jsonStr!);
-          errorMessage = jsonResponse['detail'] ?? 
-                        jsonResponse['error'] ?? 
-                        jsonResponse['message'] ?? 
-                        errorString;
+    } catch (e) {
+      Navigator.of(context).pop();
+
+      print('Error: $e');
+      print('Error Type: ${e.runtimeType}');
+
+      String errorMessage = "An error occurred";
+
+      try {
+        // Try to parse error from response
+        if (e.toString().contains('Bad state') ||
+            e.toString().contains('SocketException')) {
+          errorMessage = "Cannot connect to server";
         } else {
-          errorMessage = errorString;
+          // Extract error message from exception string
+          final errorString = e.toString();
+
+          // If it contains JSON-like content, try to parse it
+          if (errorString.contains('{')) {
+            final jsonMatch = RegExp(r'\{.*\}').firstMatch(errorString);
+            if (jsonMatch != null) {
+              final jsonStr = jsonMatch.group(0);
+              final jsonResponse = jsonDecode(jsonStr!);
+              errorMessage = jsonResponse['detail'] ??
+                  jsonResponse['error'] ??
+                  jsonResponse['message'] ??
+                  errorString;
+            } else {
+              errorMessage = errorString;
+            }
+          } else {
+            errorMessage = errorString;
+          }
         }
-      } else {
-        errorMessage = errorString;
+      } catch (parseError) {
+        print('Could not parse error: $parseError');
+        errorMessage = e.toString();
       }
+
+      print('Extracted Error: $errorMessage');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          duration: Duration(seconds: 5),
+        ),
+      );
     }
-  } catch (parseError) {
-    print('Could not parse error: $parseError');
-    errorMessage = e.toString();
-  }
-  
-  print('Extracted Error: $errorMessage');
-  
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(errorMessage),
-      backgroundColor: Theme.of(context).colorScheme.error,
-      duration: Duration(seconds: 5),
-    ),
-  );
-}
   }
 
   @override
@@ -213,7 +215,7 @@ class _LoginPageState extends State<LoginPage> {
         filled: true,
         fillColor: scheme.surfaceContainerHighest,
         contentPadding:
-        const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+            const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: scheme.outlineVariant, width: 1.2),
@@ -234,7 +236,7 @@ class _LoginPageState extends State<LoginPage> {
             backgroundColor: scheme.primary,
             foregroundColor: scheme.onPrimary,
             shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             elevation: 2,
           ),
           onPressed: signUserIn,
@@ -267,14 +269,14 @@ class _LoginPageState extends State<LoginPage> {
                 Container(
                   height: 160,
                   width: 160,
-                  child: Image.asset("assets/icons/logo.png"),
+                  child: Image.asset("assets/images/logo_dotted.webp"),
                 ),
                 const SizedBox(height: 8),
                 // title
                 Text(
                   'DELEGO',
                   style: textTheme.headlineMedium?.copyWith(
-                    color: scheme.primary,
+                    color: scheme.tertiary,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.2,
                   ),
@@ -317,7 +319,7 @@ class _LoginPageState extends State<LoginPage> {
                       'Forgot Password?',
                       style: textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: scheme.primary,
+                        color: scheme.tertiary,
                       ),
                     ),
                   ),
@@ -348,7 +350,7 @@ class _LoginPageState extends State<LoginPage> {
                       child: Text(
                         'Sign Up',
                         style: textTheme.bodyMedium?.copyWith(
-                          color: scheme.primary,
+                          color: scheme.tertiary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
