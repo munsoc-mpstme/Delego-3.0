@@ -170,8 +170,8 @@ class _HospitalitySectionState extends State<HospitalitySection> {
       Text('HOSPITALITY TEAM', style: Neon.label(scheme.onSurface, size: 16, spacing: 1.5)),
       const SizedBox(height: 8),
       Text(
-        'People on this team can scan delegate QR codes to serve food. '
-        'They do not need any other role.',
+        'People on this team scan delegate QR codes to serve food, and accept or '
+        'reject break requests in Break Coordination. They do not need any other role.',
         style: muted,
       ),
       const SizedBox(height: 16),
