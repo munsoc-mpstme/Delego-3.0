@@ -1,3 +1,4 @@
+import 'package:delego/widgets/mun_logo.dart';
 import 'package:delego/Pages/Login_Page/login_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -178,7 +179,10 @@ class _HomePageState extends State<HomePage> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(20, _barHeight, 20, 28),
         children: [
-          const HeroBanner(),
+          const MunLogoLink(
+            borderRadius: BorderRadius.all(Radius.circular(28)),
+            child: HeroBanner(),
+          ),
           NowStrip(onTap: () => goToPage(SchedulePage())),
           Text('Quick Access',
               style: TextStyle(

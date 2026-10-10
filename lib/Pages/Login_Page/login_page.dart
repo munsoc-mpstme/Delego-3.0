@@ -10,6 +10,8 @@ import 'package:delego/constants/backend.dart';
 import 'package:delego/Pages/Login_Page/forgot_password.dart';
 import 'package:delego/Theme/theme_controller.dart';
 import 'package:delego/auth/capabilities.dart';
+import 'package:delego/widgets/neon.dart';
+import 'package:delego/widgets/mun_logo.dart';
 import 'package:provider/provider.dart';
 
 
@@ -283,18 +285,20 @@ class _LoginPageState extends State<LoginPage> {
           child: Center(
             child: Column(
               children: [
-                // logo
-                Container(
-                  height: 160,
-                  width: 160,
-                  child: Image.asset("assets/images/logo_dotted.webp"),
+                // logo (plain, undotted) - tap opens the Mumbai MUN Instagram
+                MunLogoLink(
+                  child: Container(
+                    height: 160,
+                    width: 160,
+                    child: Image.asset("assets/images/logo_solid.webp"),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 // title
                 Text(
                   'DELEGO',
                   style: textTheme.headlineMedium?.copyWith(
-                    color: scheme.tertiary,
+                    color: Neon.pink,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.2,
                   ),
@@ -337,7 +341,7 @@ class _LoginPageState extends State<LoginPage> {
                       'Forgot Password?',
                       style: textTheme.bodyMedium?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: scheme.tertiary,
+                        color: Neon.pink,
                       ),
                     ),
                   ),
@@ -368,7 +372,7 @@ class _LoginPageState extends State<LoginPage> {
                       child: Text(
                         'Sign Up',
                         style: textTheme.bodyMedium?.copyWith(
-                          color: scheme.tertiary,
+                          color: Neon.pink,
                           fontWeight: FontWeight.bold,
                         ),
                       ),

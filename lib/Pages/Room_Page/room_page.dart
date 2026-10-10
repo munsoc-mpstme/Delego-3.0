@@ -51,8 +51,8 @@ class _RoomPageState extends State<RoomPage> {
   bool _isLoading = true;
   String? _error;
 
-  static const String _cacheKey = 'allotedRoomsData';
-  static const String _timestampKey = 'allotedRoomsTimestamp';
+  static const String _cacheKey = 'allotedRoomsData_v2';
+  static const String _timestampKey = 'allotedRoomsTimestamp_v2';
   static const int _cacheDurationMs = 120 * 60 * 1000;
 
   @override
@@ -110,17 +110,38 @@ class _RoomPageState extends State<RoomPage> {
   List<Room> _parseRooms(String jsonString) {
     try {
       final List<dynamic> jsonList = jsonDecode(jsonString);
-      return jsonList.map((json) => Room.fromJson(json)).toList();
+      var parsedRooms = jsonList.map((json) => Room.fromJson(json)).toList();
+      const order = ['UNSC', 'CCC', 'PSC', 'WTO', 'UNODC', 'UNICEF', 'ECOSOC', 'IPC'];
+      parsedRooms.sort((a, b) {
+        int indexA = order.indexOf(a.committeeName.toUpperCase());
+        int indexB = order.indexOf(b.committeeName.toUpperCase());
+        if (indexA == -1) indexA = 999;
+        if (indexB == -1) indexB = 999;
+        return indexA.compareTo(indexB);
+      });
+      return parsedRooms;
     } catch (_) { return []; }
   }
 
+  final Map<String, Color> _committeeColors = const {
+    'UNSC': Color(0xFFa1be46),
+    'CCC': Color(0xFF0f5add),
+    'PSC': Color(0xFF33ad6f),
+    'WTO': Color(0xFF0f5add),
+    'UNODC': Color(0xFF884c6e),
+    'UNICEF': Color(0xFF859252),
+    'ECOSOC': Color(0xFF33ad6f),
+    'IPC': Color(0xFF984875),
+  };
+
   Widget _buildRoomCard(Room room, ColorScheme scheme, TextTheme textTheme) {
+    final bgColor = _committeeColors[room.committeeName.toUpperCase()] ?? scheme.primary;
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 10, 20, 10),
       padding: const EdgeInsets.all(25),
       width: double.infinity,
       decoration: ShapeDecoration(
-        color: scheme.primary,
+        color: bgColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(10.92),
         ),

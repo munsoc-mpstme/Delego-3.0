@@ -74,8 +74,9 @@ class _QrScannerState extends State<QrScanner> {
           .showSnackBar(SnackBar(content: Text(msg)));
     });
     _loadCounts();
-    // Other counters may be scanning too, so also refresh periodically.
-    _poll = Timer.periodic(const Duration(seconds: 10), (_) => _loadCounts());
+    // The counts come from the server and cover every phone scanning, so refresh
+    // often: a scan made on another phone shows up here within a few seconds.
+    _poll = Timer.periodic(const Duration(seconds: 3), (_) => _loadCounts());
   }
 
   @override
@@ -260,6 +261,12 @@ class _QrScannerState extends State<QrScanner> {
               fontWeight: FontWeight.w600,
               color: selectedLabel == null ? scheme.error : scheme.onSurface,
             ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'Live count across all scanners · updates every few seconds',
+            style: text.bodySmall
+                ?.copyWith(color: scheme.onSurface.withValues(alpha: 0.6)),
           ),
         ],
       ),
