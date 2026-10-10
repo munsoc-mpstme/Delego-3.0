@@ -1,3 +1,4 @@
+import 'package:delego/widgets/mun_logo.dart';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -206,10 +207,12 @@ class _Ticket extends StatelessWidget {
                       child: Text('DELEGATE PASS',
                           style: Neon.label(sw.accent, size: 11, spacing: 3)),
                     ),
-                    Image.asset('assets/images/logo_solid.webp',
-                        height: 26,
-                        color: sw.accent,
-                        colorBlendMode: BlendMode.srcIn),
+                    MunLogoLink(
+                      child: Image.asset('assets/images/logo_solid.webp',
+                          height: 26,
+                          color: sw.accent,
+                          colorBlendMode: BlendMode.srcIn),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 22),

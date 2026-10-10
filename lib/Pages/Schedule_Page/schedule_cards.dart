@@ -5,6 +5,8 @@ import 'package:delego/constants/text_style.dart';
 import 'package:delego/constants/separator.dart';
 import 'package:delego/Pages/Schedule_Page/schedule_details.dart';
 
+import 'package:delego/widgets/neon.dart';
+
 class ScheduleSummary extends StatelessWidget {
   final Schedule schedule;
   final bool horizontal;
@@ -14,11 +16,21 @@ class ScheduleSummary extends StatelessWidget {
 
   const ScheduleSummary.vertical(this.schedule, {Key? key})
       : horizontal = false,
-        super(key: key);
+      super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+
+    // Pick a swatch based on event name, excluding Pink (index 1)
+    final nonPinkSwatches = [kSwatches[0], kSwatches[2], kSwatches[3]];
+    int h = 0;
+    for (final c in (schedule.name ?? '').codeUnits) {
+      h = (h * 31 + c) & 0x7fffffff;
+    }
+    final swatch = nonPinkSwatches[h % nonPinkSwatches.length];
+    final cardColor = swatch.colors[0]; // Top color of gradient
+    final textColor = swatch.nameColor;
 
     /// Thumbnail (Hero animation)
     final scheduleThumbnail = Hero(
@@ -46,14 +58,14 @@ class ScheduleSummary extends StatelessWidget {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: scheme.onPrimary, size: 16.0),
+          Icon(icon, color: textColor, size: 16.0),
           const SizedBox(width: 6.0),
           Text(
             value,
             style: TextStyle(
               fontFamily: AppFontFamilies.mainFont,
               fontSize: 13,
-              color: scheme.onPrimary,
+              color: textColor,
             ),
           ),
         ],
@@ -71,7 +83,7 @@ class ScheduleSummary extends StatelessWidget {
           Text(
             schedule.name ?? '',
             style: Style.titleTextStyle.copyWith(
-              color: scheme.onPrimary,
+              color: textColor,
               fontWeight: FontWeight.w600,
               fontSize: 18,
             ),
@@ -82,14 +94,14 @@ class ScheduleSummary extends StatelessWidget {
           Text(
             schedule.location ?? '',
             style: Style.commonTextStyle.copyWith(
-              color: scheme.onPrimary.withValues(alpha: 0.8),
+              color: textColor.withValues(alpha: 0.8),
               fontSize: 14,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 6.0),
-          Separator(color: scheme.onPrimary.withValues(alpha: 0.2)),
+          Separator(color: textColor.withValues(alpha: 0.2)),
           const SizedBox(height: 6.0),
           _scheduleValue(
             value: schedule.time ?? '',
@@ -102,7 +114,7 @@ class ScheduleSummary extends StatelessWidget {
     /// Full card layout
     final scheduleCard = Container(
       decoration: BoxDecoration(
-        color: scheme.primary,
+        color: cardColor,
         borderRadius: BorderRadius.circular(12.0),
         boxShadow: [
           BoxShadow(

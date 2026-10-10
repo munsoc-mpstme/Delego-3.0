@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
+
+import 'package:delego/constants/countries.dart';
 
 class EBToolsPage extends StatefulWidget {
   const EBToolsPage({super.key});
@@ -14,6 +17,7 @@ class _EBToolsPageState extends State<EBToolsPage> with SingleTickerProviderStat
   // --- GSL State ---
   final List<String> _gslList = [];
   final TextEditingController _countryController = TextEditingController();
+  final FocusNode _countryFocus = FocusNode();
 
   // --- Timer State ---
   Timer? _timer;
@@ -30,19 +34,27 @@ class _EBToolsPageState extends State<EBToolsPage> with SingleTickerProviderStat
   void dispose() {
     _tabController.dispose();
     _countryController.dispose();
+    _countryFocus.dispose();
     _timer?.cancel();
     super.dispose();
   }
 
   // --- GSL Functions ---
-  void _addCountry() {
-    final country = _countryController.text.trim();
-    if (country.isNotEmpty) {
-      setState(() {
-        _gslList.add(country);
-        _countryController.clear();
-      });
+  void _addCountry([String? picked]) {
+    final country = (picked ?? _countryController.text).trim();
+    if (country.isEmpty) return;
+
+    final exists =
+        _gslList.any((c) => c.toLowerCase() == country.toLowerCase());
+    if (exists) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text('$country is already on the list.')));
+    } else {
+      setState(() => _gslList.add(country));
     }
+    _countryController.clear();
+    _countryFocus.requestFocus(); // keep typing the next one
   }
 
   void _removeCountry(int index) {
@@ -121,13 +133,62 @@ class _EBToolsPageState extends State<EBToolsPage> with SingleTickerProviderStat
           child: Row(
             children: [
               Expanded(
-                child: TextField(
-                  controller: _countryController,
-                  decoration: const InputDecoration(
-                    labelText: "Add Country",
-                    border: OutlineInputBorder(),
-                  ),
-                  onSubmitted: (_) => _addCountry(),
+                child: RawAutocomplete<String>(
+                  textEditingController: _countryController,
+                  focusNode: _countryFocus,
+                  optionsBuilder: (value) {
+                    final q = value.text.trim().toLowerCase();
+                    if (q.isEmpty) return const Iterable<String>.empty();
+                    final starts = kMunCountries
+                        .where((c) => c.toLowerCase().startsWith(q));
+                    final contains = kMunCountries.where((c) =>
+                        !c.toLowerCase().startsWith(q) &&
+                        c.toLowerCase().contains(q));
+                    return [...starts, ...contains].take(8);
+                  },
+                  // Picking a suggestion adds it straight to the GSL.
+                  onSelected: (country) => _addCountry(country),
+                  fieldViewBuilder: (context, controller, focusNode, _) {
+                    return TextField(
+                      controller: controller,
+                      focusNode: focusNode,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: const InputDecoration(
+                        labelText: "Add Country (type first letters)",
+                        border: OutlineInputBorder(),
+                      ),
+                      onSubmitted: (_) => _addCountry(),
+                    );
+                  },
+                  optionsViewBuilder: (context, onSelected, options) {
+                    return Align(
+                      alignment: Alignment.topLeft,
+                      child: Material(
+                        elevation: 6,
+                        borderRadius: BorderRadius.circular(12),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxHeight: 280,
+                            maxWidth: MediaQuery.of(context).size.width - 100,
+                          ),
+                          child: ListView.builder(
+                            padding: EdgeInsets.zero,
+                            shrinkWrap: true,
+                            itemCount: options.length,
+                            itemBuilder: (context, i) {
+                              final option = options.elementAt(i);
+                              return ListTile(
+                                dense: true,
+                                leading: const Icon(Icons.flag_outlined),
+                                title: Text(option),
+                                onTap: () => onSelected(option),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
               const SizedBox(width: 8),
@@ -177,11 +238,16 @@ class _EBToolsPageState extends State<EBToolsPage> with SingleTickerProviderStat
   }
 
   Widget _buildTimerTab(ColorScheme scheme) {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
           Text(
             _formatTime(_remainingSeconds),
             style: TextStyle(
@@ -224,10 +290,102 @@ class _EBToolsPageState extends State<EBToolsPage> with SingleTickerProviderStat
               _buildPresetButton("10m (Caucus)", 600, scheme),
               _buildPresetButton("15m (Caucus)", 900, scheme),
             ],
-          )
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: _showCustomTimerDialog,
+            icon: const Icon(Icons.edit_calendar),
+            label: const Text("Custom Timer"),
+          ),
         ],
       ),
+            ),
+          ),
+        );
+      },
     );
+  }
+
+  /// Lets the EB type any duration (minutes + seconds) instead of a preset.
+  Future<void> _showCustomTimerDialog() async {
+    final minCtrl = TextEditingController(text: '2');
+    final secCtrl = TextEditingController(text: '0');
+
+    final seconds = await showDialog<int>(
+      context: context,
+      builder: (ctx) {
+        String? error;
+        return StatefulBuilder(
+          builder: (ctx, setLocal) => AlertDialog(
+            title: const Text('Custom Timer'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: minCtrl,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                          decoration: const InputDecoration(labelText: 'Minutes'),
+                        ),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(':', style: TextStyle(fontSize: 24)),
+                      ),
+                      Expanded(
+                        child: TextField(
+                          controller: secCtrl,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                          decoration: const InputDecoration(labelText: 'Seconds'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Text(error!,
+                          style: TextStyle(color: Theme.of(ctx).colorScheme.error)),
+                    ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  final m = int.tryParse(minCtrl.text) ?? 0;
+                  final s = int.tryParse(secCtrl.text) ?? 0;
+                  final total = m * 60 + s;
+                  if (total <= 0) {
+                    setLocal(() => error = 'Enter a time greater than zero.');
+                    return;
+                  }
+                  if (total > 99 * 60 + 59) {
+                    setLocal(() => error = 'The maximum is 99:59.');
+                    return;
+                  }
+                  Navigator.pop(ctx, total);
+                },
+                child: const Text('Set'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    minCtrl.dispose();
+    secCtrl.dispose();
+    if (seconds != null) _setTimer(seconds);
   }
 
   Widget _buildPresetButton(String label, int seconds, ColorScheme scheme) {
@@ -238,3 +396,4 @@ class _EBToolsPageState extends State<EBToolsPage> with SingleTickerProviderStat
     );
   }
 }
+

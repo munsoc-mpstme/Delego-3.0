@@ -1,3 +1,4 @@
+import 'package:delego/widgets/mun_logo.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -169,10 +170,12 @@ class _RegisterPageState extends State<RegisterPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(
-                  height: 160,
-                  width: 160,
-                  child: Image.asset("assets/images/logo_solid.webp"),
+                MunLogoLink(
+                  child: SizedBox(
+                    height: 160,
+                    width: 160,
+                    child: Image.asset("assets/images/logo_solid.webp"),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Text(

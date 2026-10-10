@@ -220,12 +220,15 @@ class _CommitteeChatPageState extends State<CommitteeChatPage> {
 
   // --------------------------------------------------------------- sending
 
-  Future<void> _send(String type) async {
+  Future<void> _send(String type, {String? body}) async {
     final id = _committeeId;
     if (id == null || _sending) return;
     setState(() => _sending = true);
     try {
-      final res = await _api.postJson('/committees/$id/messages', {'type': type});
+      final res = await _api.postJson('/committees/$id/messages', {
+        'type': type,
+        if (body != null) 'body': body,
+      });
       if (!mounted) return;
       if (res.statusCode == 201) {
         // The socket echoes it too; _add ignores the duplicate.
@@ -307,6 +310,57 @@ class _CommitteeChatPageState extends State<CommitteeChatPage> {
         onPressed: _sending ? null : () => _send(type),
         icon: Icon(icon, size: 20),
         label: Text(label),
+      ),
+    );
+  }
+
+  void _sendLate(int minutes) =>
+      _send('late', body: 'Running $minutes minutes late');
+
+  /// "Running late" (5 min by default) with a small triangle beside it that opens
+  /// a menu to choose 5, 10 or 15 minutes.
+  Widget _lateSplitButton() {
+    const color = Color(0xFFE5700F);
+    const radius = Radius.circular(20);
+    return Expanded(
+      child: Row(
+        children: [
+          Expanded(
+            child: FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: color,
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(50),
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.horizontal(left: radius),
+                ),
+              ),
+              onPressed: _sending ? null : () => _sendLate(5),
+              icon: const Icon(Icons.timer, size: 20),
+              label: const Text('Running late'),
+            ),
+          ),
+          const SizedBox(width: 2),
+          PopupMenuButton<int>(
+            tooltip: 'Choose how late',
+            enabled: !_sending,
+            onSelected: _sendLate,
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 5, child: Text('Late by 5 minutes')),
+              PopupMenuItem(value: 10, child: Text('Late by 10 minutes')),
+              PopupMenuItem(value: 15, child: Text('Late by 15 minutes')),
+            ],
+            child: Container(
+              height: 50,
+              width: 40,
+              decoration: BoxDecoration(
+                color: _sending ? color.withValues(alpha: 0.4) : color,
+                borderRadius: const BorderRadius.horizontal(right: radius),
+              ),
+              child: const Icon(Icons.arrow_drop_down, color: Colors.white, size: 30),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -411,7 +465,7 @@ class _CommitteeChatPageState extends State<CommitteeChatPage> {
                                 Row(children: [
                                   _action('free', 'Request break', Icons.free_breakfast, const Color(0xFF2F55FF)),
                                   const SizedBox(width: 10),
-                                  _action('late', 'Running late', Icons.timer, const Color(0xFFE5700F)),
+                                  _lateSplitButton(),
                                 ]),
                               if (canRequest && canRespond) const SizedBox(height: 10),
                               if (canRespond)

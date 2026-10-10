@@ -1,3 +1,4 @@
+import 'package:delego/widgets/mun_logo.dart';
 import 'package:flutter/material.dart';
 import 'package:delego/Pages/Home_Page/my_list_tile.dart';
 import 'package:delego/Pages/Sponsors_Page/sponsor_page.dart';
@@ -74,7 +75,9 @@ class _MyDrawerState extends State<MyDrawer> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Image.asset('assets/images/logo_solid.webp', height: 34),
+                  MunLogoLink(
+                    child: Image.asset('assets/images/logo_solid.webp', height: 34),
+                  ),
                   const SizedBox(height: 10),
                   Text('MUMBAI MUN',
                       style: Neon.label(Neon.yellow, size: 12, spacing: 3)),
