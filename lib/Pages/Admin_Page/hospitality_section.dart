@@ -5,23 +5,45 @@ import 'package:delego/api/api_client.dart';
 import 'package:delego/api/hospitality_team.dart';
 import 'package:delego/widgets/neon.dart';
 
-/// Create the Hospitality team and choose who is on it. Members get the food scanner
-/// (they scan delegate QR codes at meals). Shown to admins only, under the role form.
-class HospitalitySection extends StatefulWidget {
+/// Create the Hospitality team and choose who is on it.
+class HospitalitySection extends StatelessWidget {
   const HospitalitySection({super.key, this.api});
 
   /// Tests pass a fake; the app builds it from the shared [ApiClient].
   final HospitalityTeamApi? api;
 
   @override
-  State<HospitalitySection> createState() => _HospitalitySectionState();
+  Widget build(BuildContext context) => ManagedTeamSection(
+        config: kHospitalityConfig,
+        api: api,
+      );
 }
 
-class _HospitalitySectionState extends State<HospitalitySection> {
-  late final HospitalityTeamApi _api;
+class IhlSection extends StatelessWidget {
+  const IhlSection({super.key, this.api});
+
+  final IhlTeamApi? api;
+
+  @override
+  Widget build(BuildContext context) =>
+      ManagedTeamSection(config: kIhlConfig, api: api);
+}
+
+class ManagedTeamSection extends StatefulWidget {
+  const ManagedTeamSection({super.key, required this.config, this.api});
+
+  final ManagedTeamConfig config;
+  final TeamRosterApi? api;
+
+  @override
+  State<ManagedTeamSection> createState() => _ManagedTeamSectionState();
+}
+
+class _ManagedTeamSectionState extends State<ManagedTeamSection> {
+  late final TeamRosterApi _api;
   final _email = TextEditingController();
 
-  HospitalityState? _state;
+  ManagedTeamState? _state;
   String? _error;
   bool _loading = true;
   bool _busy = false;
@@ -29,7 +51,8 @@ class _HospitalitySectionState extends State<HospitalitySection> {
   @override
   void initState() {
     super.initState();
-    _api = widget.api ?? HospitalityTeamApi(context.read<ApiClient>());
+    _api =
+        widget.api ?? TeamRosterApi(context.read<ApiClient>(), widget.config);
     _load();
   }
 
@@ -71,7 +94,7 @@ class _HospitalitySectionState extends State<HospitalitySection> {
       _loading = true;
       _error = null;
     });
-    HospitalityState? state;
+    ManagedTeamState? state;
     String? error;
     try {
       state = await _api.load();
@@ -103,7 +126,7 @@ class _HospitalitySectionState extends State<HospitalitySection> {
     if (!mounted) return;
     setState(() => _busy = false);
     if (ok == true) {
-      _say('Hospitality team created.');
+      _say('${widget.config.name} team created.');
       await _load();
     }
   }
@@ -123,8 +146,8 @@ class _HospitalitySectionState extends State<HospitalitySection> {
     if (added == null) return;
     _email.clear();
     _say(added
-        ? '$email can now scan food.'
-        : '$email has not registered yet. They get access when they do.');
+        ? '$email added. They also need the OC role to use this team.'
+        : '$email has not registered yet. They need to register and have the OC role for team access.');
     await _load();
   }
 
@@ -134,8 +157,8 @@ class _HospitalitySectionState extends State<HospitalitySection> {
     final sure = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Remove from Hospitality?'),
-        content: Text('${m.label} will no longer be able to scan food.'),
+        title: Text('Remove from ${widget.config.name}?'),
+        content: Text('${m.label} will no longer have this team\'s access.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -155,7 +178,7 @@ class _HospitalitySectionState extends State<HospitalitySection> {
     if (!mounted) return;
     setState(() => _busy = false);
     if (ok == true) {
-      _say('${m.label} removed.');
+      _say('${m.label} removed from ${widget.config.name}.');
       await _load();
     }
   }
@@ -167,12 +190,12 @@ class _HospitalitySectionState extends State<HospitalitySection> {
 
     final children = <Widget>[
       const Divider(height: 48),
-      Text('HOSPITALITY TEAM',
+      Text('${widget.config.name.toUpperCase()} TEAM',
           style: Neon.label(scheme.onSurface, size: 16, spacing: 1.5)),
       const SizedBox(height: 8),
       Text(
-        'People on this team scan delegate QR codes to serve food, and accept or '
-        'reject break requests in Break Coordination. They do not need any other role.',
+        '${widget.config.description}. Each member must also have the OC role; '
+        'adding someone to this team without the OC role does not grant team access.',
         style: muted,
       ),
       const SizedBox(height: 16),
@@ -191,7 +214,7 @@ class _HospitalitySectionState extends State<HospitalitySection> {
       ]);
     } else if (!_state!.hasTeam) {
       children.add(FilledButton.icon(
-        key: const Key('create-hospitality'),
+        key: Key('create-${widget.config.key}'),
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(54),
         ),
@@ -199,7 +222,7 @@ class _HospitalitySectionState extends State<HospitalitySection> {
         icon: const Icon(Icons.groups),
         label: FittedBox(
           fit: BoxFit.scaleDown,
-          child: Text('CREATE HOSPITALITY TEAM',
+          child: Text('CREATE ${widget.config.name.toUpperCase()} TEAM',
               maxLines: 1,
               style: Neon.label(scheme.onPrimary, size: 14, spacing: 1)),
         ),
@@ -207,7 +230,7 @@ class _HospitalitySectionState extends State<HospitalitySection> {
     } else {
       children.addAll([
         TextField(
-          key: const Key('hospitality-email'),
+          key: Key('${widget.config.key}-email'),
           controller: _email,
           keyboardType: TextInputType.emailAddress,
           autocorrect: false,
@@ -217,7 +240,7 @@ class _HospitalitySectionState extends State<HospitalitySection> {
         ),
         const SizedBox(height: 12),
         FilledButton(
-          key: const Key('add-hospitality-member'),
+          key: Key('add-${widget.config.key}-member'),
           style: FilledButton.styleFrom(
             minimumSize: const Size.fromHeight(50),
           ),
@@ -232,7 +255,9 @@ class _HospitalitySectionState extends State<HospitalitySection> {
           for (final m in _state!.members)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.restaurant),
+              leading: Icon(widget.config.key == 'hospitality'
+                  ? Icons.restaurant
+                  : Icons.groups),
               title: Text(
                 m.label,
                 maxLines: 2,

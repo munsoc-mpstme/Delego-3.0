@@ -1,17 +1,17 @@
-/// Break coordination between a committee room's OC and Hospitality.
+/// Break coordination between a committee room's OC and an admin.
 ///
 /// The room asks for a break at a clock time (`free`) or says it is running late
-/// (`late`). Hospitality accepts (`accept`, now or in a few minutes) or rejects with a
-/// time to come instead (`reject`). When Hospitality names a time, the room agrees to
-/// it (`agree`) or declines with a time of its own (`decline`). A time travels in the
+/// (`late`). An admin accepts (`accept`, now or in a few minutes) or rejects with a
+/// time to come instead (`reject`). When an admin names a time, the room agrees to it
+/// (`agree`) or declines with a time of its own (`decline`). A time travels in the
 /// message payload as `at` (ISO, UTC).
 library;
 
 /// The room's side of the conversation.
 const roomActions = {'free', 'late', 'agree', 'decline'};
 
-/// Hospitality's side.
-const hospitalityActions = {'accept', 'reject'};
+/// Admin's side.
+const adminActions = {'accept', 'reject'};
 
 /// The delays offered on the split buttons.
 const breakDelays = [5, 10, 15];
@@ -95,14 +95,14 @@ String agreeText(DateTime at) =>
 String declineText(int delay, DateTime now) =>
     "Declined - we'll be free in $delay min (${clockTime(now.add(Duration(minutes: delay)))})";
 
-/// Hospitality's latest offer of a time, if the room has not answered it yet: the newest
+/// An admin's latest offer of a time, if the room has not answered it yet: the newest
 /// break message, when it is an accept or reject that names a time no more than
 /// [offerLifetime] ago. Anything the room sends after it (including a new request)
 /// answers it. Messages are oldest first.
 BreakMsg? pendingOffer(List<BreakMsg> messages, DateTime now) {
   for (final m in messages.reversed) {
     if (roomActions.contains(m.type)) return null;
-    if (hospitalityActions.contains(m.type)) {
+    if (adminActions.contains(m.type)) {
       final at = m.at;
       if (at == null || now.difference(at) > offerLifetime) return null;
       return m;

@@ -200,7 +200,7 @@ class _HomePageState extends State<HomePage> {
     final cardHeight = (cardWidth * 0.9).clamp(120.0, 150.0);
     final scanCardHeight = (contentWidth * 0.26).clamp(76.0, 92.0);
 
-    final isDelegate = caps.role == 'delegate' &&
+    final isDelegate = caps.can(Perm.guidesView) &&
         !caps.can(Perm.foodScan) &&
         !caps.can(Perm.ebTools) &&
         !caps.can(Perm.adminRoles);

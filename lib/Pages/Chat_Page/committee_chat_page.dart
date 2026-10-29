@@ -44,10 +44,9 @@ final _kinds = <String, ({String label, NeonSwatch swatch, IconData icon})>{
   ),
 };
 
-/// Break coordination: a committee's OC asks for a break at a time, Hospitality (the
-/// admin) accepts or offers a later time, and the OC answers the offer. Messages are
-/// posted over REST and pushed live over a WebSocket; what you can send depends on the
-/// permissions the server gave you.
+/// Break coordination: an IHL committee's OC asks for a break at a time, and an admin
+/// accepts or offers a later time. Messages are posted over REST and pushed live over a
+/// WebSocket; what you can send depends on the permissions the server gave you.
 ///
 /// The admin sees every committee. Everyone else coordinates one committee, picked on
 /// first entry and remembered on this phone (prefs `break_committee_id`/
@@ -466,7 +465,7 @@ class _CommitteeChatPageState extends State<CommitteeChatPage>
   void _sendLate(int minutes) =>
       _send('late', body: 'Running $minutes minutes late');
 
-  /// Hospitality accepts: now (no time), or come in [delay] minutes.
+  /// An admin accepts: now (no time), or come in [delay] minutes.
   void _accept(int? delay) {
     final now = DateTime.now();
     _send('accept',
@@ -476,7 +475,7 @@ class _CommitteeChatPageState extends State<CommitteeChatPage>
             : {'at': atPayload(now.add(Duration(minutes: delay)))});
   }
 
-  /// Hospitality rejects and offers a time [delay] minutes from now.
+  /// An admin rejects and offers a time [delay] minutes from now.
   void _reject(int delay) {
     final now = DateTime.now();
     _send('reject',
@@ -709,7 +708,7 @@ class _CommitteeChatPageState extends State<CommitteeChatPage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Hospitality: come at ${clockTime(offer.at!)}',
+            'Admin: come at ${clockTime(offer.at!)}',
             style:
                 TextStyle(color: scheme.onSurface, fontWeight: FontWeight.w700),
           ),
@@ -745,8 +744,7 @@ class _CommitteeChatPageState extends State<CommitteeChatPage>
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final caps = context.watch<Capabilities>();
-    // The admin is Hospitality's side: they answer, they never ask for a break.
-    final canRequest = caps.can(Perm.chatSendRequest) && !_isAdmin;
+    final canRequest = caps.can(Perm.chatSendRequest);
     final canRespond = caps.can(Perm.chatRespond);
 
     if (!_isAdmin && !_loading && _committeeId == null) {

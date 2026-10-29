@@ -4,18 +4,48 @@ import 'package:http/http.dart' as http;
 
 import 'api_client.dart';
 
-/// The team that serves food. Its members scan delegate QR codes (food.manage_entitlement)
-/// and answer break requests in the committee chats (chat.view to read them, chat.post
-/// to accept or reject). The server turns these into the scanner and the accept / reject
-/// buttons for whoever is on the team.
+/// Team roster definitions shared by the admin-managed team screens.
 const kHospitalityTeamName = 'Hospitality';
 const kHospitalityPermissions = [
   'food.manage_entitlement',
   'chat.view',
   'chat.post',
 ];
-const kHospitalityDescription =
-    'Scans delegate QR codes for food and answers break requests';
+const kHospitalityDescription = 'Scans delegate QR codes for food';
+const kIhlTeamName = 'IHL';
+const kIhlPermissions = [
+  'ihl.request_break',
+  'chat.view',
+  'chat.post',
+];
+const kIhlDescription = 'Coordinates break requests in committee chats';
+
+class ManagedTeamConfig {
+  const ManagedTeamConfig({
+    required this.name,
+    required this.description,
+    required this.permissions,
+    required this.key,
+  });
+
+  final String name;
+  final String description;
+  final List<String> permissions;
+  final String key;
+}
+
+const kHospitalityConfig = ManagedTeamConfig(
+  name: kHospitalityTeamName,
+  description: kHospitalityDescription,
+  permissions: kHospitalityPermissions,
+  key: 'hospitality',
+);
+const kIhlConfig = ManagedTeamConfig(
+  name: kIhlTeamName,
+  description: kIhlDescription,
+  permissions: kIhlPermissions,
+  key: 'ihl',
+);
 
 /// A server refusal with a message that can be shown to the person using the screen.
 class TeamApiException implements Exception {
@@ -39,8 +69,8 @@ class TeamMember {
 }
 
 /// What the screen shows: no team yet (teamId == null), or the team and its members.
-class HospitalityState {
-  const HospitalityState({
+class ManagedTeamState {
+  const ManagedTeamState({
     required this.eventId,
     this.teamId,
     this.members = const [],
@@ -53,18 +83,21 @@ class HospitalityState {
   bool get hasTeam => teamId != null;
 }
 
-/// Creates the Hospitality team and manages who is on it, through the server's team
-/// routes. Admins only: the server checks that on every call.
+typedef HospitalityState = ManagedTeamState;
+
+/// Manages a configured team through the server's team routes. Admins only: the server
+/// checks that on every call.
 ///
 /// Throws [Forbidden] and [SessionExpired] (from [ApiClient]) untouched so the screen
 /// can handle them, and [TeamApiException] for anything else the server refuses.
-class HospitalityTeamApi {
-  HospitalityTeamApi(this._api);
+class TeamRosterApi {
+  TeamRosterApi(this._api, this.config);
 
   final ApiClient _api;
+  final ManagedTeamConfig config;
 
-  /// Find the event, then the Hospitality team and its roster, if the team exists.
-  Future<HospitalityState> load() async {
+  /// Find the event, then the configured team and its roster, if it exists.
+  Future<ManagedTeamState> load() async {
     final events = _list(await _api.get('/events'), 'Could not load the event');
     if (events.isEmpty) {
       throw TeamApiException('The server has no event set up yet.');
@@ -76,16 +109,16 @@ class HospitalityTeamApi {
     final team = teams.cast<Map<String, dynamic>?>().firstWhere(
           (t) =>
               '${t?['name']}'.trim().toLowerCase() ==
-              kHospitalityTeamName.toLowerCase(),
+              config.name.toLowerCase(),
           orElse: () => null,
         );
-    if (team == null) return HospitalityState(eventId: eventId);
+    if (team == null) return ManagedTeamState(eventId: eventId);
 
     final teamId = (team['id'] as num).toInt();
     await _ensurePermissions(teamId, team['permissions']);
     final roster = _list(await _api.get('/teams/$teamId/members'),
         'Could not load the team members');
-    return HospitalityState(
+    return ManagedTeamState(
       eventId: eventId,
       teamId: teamId,
       members: [
@@ -99,15 +132,14 @@ class HospitalityTeamApi {
     );
   }
 
-  /// A team made by an earlier version of the app only had the food permission. Add the
-  /// chat ones (keeping anything else it has) so its members can answer break requests.
+  /// Ensure existing teams have their current permissions without removing extras.
   Future<void> _ensurePermissions(int teamId, Object? current) async {
     final have = <String>[
       if (current is List) for (final p in current) '$p',
     ];
-    if (kHospitalityPermissions.every(have.contains)) return;
+    if (config.permissions.every(have.contains)) return;
     final res = await _api.patchJson('/teams/$teamId/permissions', {
-      'permissions': {...have, ...kHospitalityPermissions}.toList(),
+      'permissions': {...have, ...config.permissions}.toList(),
     });
     if (res.statusCode != 200) {
       throw TeamApiException(
@@ -115,13 +147,12 @@ class HospitalityTeamApi {
     }
   }
 
-  /// Create the team with the permissions above. A 409 means it already exists (someone
-  /// else just made it), which is fine.
+  /// Create the configured team. A 409 means it already exists, which is fine.
   Future<void> createTeam(int eventId) async {
     final res = await _api.postJson('/events/$eventId/teams', {
-      'name': kHospitalityTeamName,
-      'description': kHospitalityDescription,
-      'permissions': kHospitalityPermissions,
+      'name': config.name,
+      'description': config.description,
+      'permissions': config.permissions,
     });
     if (res.statusCode == 201 || res.statusCode == 409) return;
     throw TeamApiException(_detail(res, 'Could not create the team'));
@@ -171,4 +202,12 @@ class HospitalityTeamApi {
     } catch (_) {}
     return '$fallback (${res.statusCode}).';
   }
+}
+
+class HospitalityTeamApi extends TeamRosterApi {
+  HospitalityTeamApi(ApiClient api) : super(api, kHospitalityConfig);
+}
+
+class IhlTeamApi extends TeamRosterApi {
+  IhlTeamApi(ApiClient api) : super(api, kIhlConfig);
 }

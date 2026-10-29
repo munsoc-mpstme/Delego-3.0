@@ -9,29 +9,40 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// What GET /delegates/me returns for each role (mundra-master/permissions.py).
-const _serverPermissions = <String, List<String>>{
-  'delegate': ['badge.view', 'guides.view'],
-  'eb': ['badge.view', 'eb.tools', 'guides.view'],
-  'oc': ['chat.send_request', 'chat.view', 'eb.tools', 'food.scan'],
-  // A Hospitality team member who is otherwise a plain delegate.
-  'hospitality': [
-    'badge.view',
-    'chat.respond',
-    'chat.view',
-    'food.scan',
-    'guides.view',
-  ],
-  'admin': [
-    'admin.roles',
-    'badge.view',
-    'chat.respond',
-    'chat.send_request',
-    'chat.view',
-    'eb.tools',
-    'food.scan',
-    'guides.view',
-  ],
+/// What GET /delegates/me returns for each role/team combination.
+const _serverProfiles = <String, ({String role, List<String> permissions})>{
+  'delegate': (
+    role: 'delegate',
+    permissions: ['badge.view', 'guides.view'],
+  ),
+  'eb': (
+    role: 'eb',
+    permissions: ['badge.view', 'eb.tools', 'guides.view'],
+  ),
+  'oc': (
+    role: 'oc',
+    permissions: ['badge.view', 'chat.view'],
+  ),
+  'hospitality_oc': (
+    role: 'oc',
+    permissions: ['badge.view', 'chat.view', 'food.scan'],
+  ),
+  'ihl_oc': (
+    role: 'oc',
+    permissions: ['badge.view', 'chat.send_request', 'chat.view'],
+  ),
+  'admin': (
+    role: 'admin',
+    permissions: [
+      'admin.roles',
+      'badge.view',
+      'chat.respond',
+      'chat.view',
+      'eb.tools',
+      'food.scan',
+      'guides.view',
+    ],
+  ),
 };
 
 class FakeApi extends ApiClient {
@@ -44,13 +55,16 @@ class FakeApi extends ApiClient {
   Future<http.Response> get(String path) => handler();
 }
 
-http.Response me(String role) => http.Response(
-    jsonEncode({
-      'id': 'x',
-      'role': role,
-      'permissions': _serverPermissions[role],
-    }),
-    200);
+http.Response me(String profile) {
+  final data = _serverProfiles[profile]!;
+  return http.Response(
+      jsonEncode({
+        'id': 'x',
+        'role': data.role,
+        'permissions': data.permissions,
+      }),
+      200);
+}
 
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -74,7 +88,12 @@ void main() {
     expect(caps.loaded, isTrue);
     expect(caps.can(Perm.guidesView), isTrue);
     expect(caps.can(Perm.badgeView), isTrue);
-    for (final p in [Perm.ebTools, Perm.foodScan, Perm.chatView, Perm.adminRoles]) {
+    for (final p in [
+      Perm.ebTools,
+      Perm.foodScan,
+      Perm.chatView,
+      Perm.adminRoles
+    ]) {
       expect(caps.can(p), isFalse, reason: p);
     }
   });
@@ -89,43 +108,58 @@ void main() {
     }
   });
 
-  test('oc: scanning, chat, EB tools and their own QR badge, but no guides',
-      () async {
+  test('oc without a team: badge and chat only', () async {
     final caps = await loadAs('oc');
-    for (final p in [
-      Perm.ebTools,
-      Perm.foodScan,
-      Perm.chatView,
-      Perm.chatSendRequest,
-      Perm.badgeView,
-    ]) {
+    for (final p in [Perm.chatView, Perm.badgeView]) {
       expect(caps.can(p), isTrue, reason: p);
     }
-    for (final p in [Perm.guidesView, Perm.adminRoles]) {
+    for (final p in [
+      Perm.guidesView,
+      Perm.adminRoles,
+      Perm.ebTools,
+      Perm.foodScan,
+      Perm.chatSendRequest,
+      Perm.chatRespond,
+    ]) {
       expect(caps.can(p), isFalse, reason: p);
     }
     expect(caps.isAdmin, isFalse);
   });
 
-  test('oc can request a break but not accept or reject one', () async {
-    final caps = await loadAs('oc');
-    expect(caps.can(Perm.chatSendRequest), isTrue);
+  test('an OC role alone does not grant a permission', () async {
+    final api = FakeApi()
+      ..handler = () async => http.Response(
+          jsonEncode({'id': 'x', 'role': 'oc', 'permissions': []}), 200);
+    final caps = Capabilities(api);
+
+    await caps.refresh();
+
+    expect(caps.can(Perm.badgeView), isFalse);
+    expect(caps.can(Perm.chatView), isFalse);
+  });
+
+  test('Hospitality OC can scan food, but cannot request or respond', () async {
+    final caps = await loadAs('hospitality_oc');
+    expect(caps.can(Perm.foodScan), isTrue);
+    expect(caps.can(Perm.chatView), isTrue);
+    expect(caps.can(Perm.chatSendRequest), isFalse);
     expect(caps.can(Perm.chatRespond), isFalse);
   });
 
-  test('a Hospitality member can accept or reject but not request', () async {
-    final caps = await loadAs('hospitality');
-    expect(caps.can(Perm.chatRespond), isTrue);
+  test('IHL OC can request a break but cannot accept or reject', () async {
+    final caps = await loadAs('ihl_oc');
+    expect(caps.can(Perm.chatSendRequest), isTrue);
     expect(caps.can(Perm.chatView), isTrue);
-    expect(caps.can(Perm.foodScan), isTrue);
-    expect(caps.can(Perm.chatSendRequest), isFalse);
+    expect(caps.can(Perm.foodScan), isFalse);
+    expect(caps.can(Perm.chatRespond), isFalse);
   });
 
   test('admin: everything, including role changes', () async {
     final caps = await loadAs('admin');
-    for (final p in _serverPermissions['admin']!) {
+    for (final p in _serverProfiles['admin']!.permissions) {
       expect(caps.can(p), isTrue, reason: p);
     }
+    expect(caps.can(Perm.chatSendRequest), isFalse);
     expect(caps.isAdmin, isTrue);
   });
 
@@ -142,8 +176,9 @@ void main() {
     expect(caps.can(Perm.foodScan), isFalse);
   });
 
-  test('a failed refresh keeps what was known and reports the problem', () async {
-    final api = FakeApi()..handler = () async => me('oc');
+  test('a failed refresh keeps what was known and reports the problem',
+      () async {
+    final api = FakeApi()..handler = () async => me('hospitality_oc');
     final caps = Capabilities(api);
     await caps.refresh();
 
@@ -155,7 +190,7 @@ void main() {
   });
 
   test('a demotion applies on the next refresh', () async {
-    final api = FakeApi()..handler = () async => me('oc');
+    final api = FakeApi()..handler = () async => me('hospitality_oc');
     final caps = Capabilities(api);
     await caps.refresh();
     expect(caps.can(Perm.foodScan), isTrue);
@@ -178,7 +213,8 @@ void main() {
     expect(fresh.loaded, isFalse);
   });
 
-  Widget gated(Capabilities caps, List<String> anyOf) => ChangeNotifierProvider.value(
+  Widget gated(Capabilities caps, List<String> anyOf) =>
+      ChangeNotifierProvider.value(
         value: caps,
         child: MaterialApp(
           home: PermissionGate(
@@ -190,7 +226,7 @@ void main() {
 
   testWidgets('the gate shows the screen to a user who holds the permission',
       (tester) async {
-    final caps = await loadAs('oc');
+    final caps = await loadAs('hospitality_oc');
     await tester.pumpWidget(gated(caps, [Perm.foodScan]));
     expect(find.text('SECRET SCREEN'), findsOneWidget);
   });
@@ -204,7 +240,7 @@ void main() {
 
   testWidgets('the gate reacts when the role changes while it is open',
       (tester) async {
-    final api = FakeApi()..handler = () async => me('oc');
+    final api = FakeApi()..handler = () async => me('hospitality_oc');
     final caps = Capabilities(api);
     await caps.refresh();
     await tester.pumpWidget(gated(caps, [Perm.foodScan]));

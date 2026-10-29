@@ -8,8 +8,8 @@ import 'package:delego/auth/capabilities.dart';
 import 'package:delego/Pages/Admin_Page/hospitality_section.dart';
 import 'package:delego/widgets/neon.dart';
 
-/// Change a user's role, and set up the Hospitality team that scans food. Admins only
-/// (the server enforces it too, and records every role change in its audit log).
+/// Change a user's role and set up the Hospitality and IHL teams. Admins only (the
+/// server enforces it too, and records every role change in its audit log).
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
 
@@ -153,6 +153,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 size: 14, spacing: 1)),
                   ),
                   const HospitalitySection(),
+                  const IhlSection(),
                 ],
               ),
             ),
